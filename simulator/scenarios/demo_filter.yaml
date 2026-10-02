@@ -1,0 +1,5 @@
+name: "Main demo: AHU-4 filter blockage"
+# Start the simulator at 10:00 or later (occupied hours). Times are simulated minutes after loading.
+# At the default speed (5 s per simulated minute) the fault appears about 50 s after loading.
+steps:
+  - {after_min: 10, cmd: "inject AHU-4 filter_blockage 15"}

@@ -1,0 +1,45 @@
+# Simulator configuration. Times are building local time, written as UTC ("Z") in the data.
+
+seed: 42
+
+mqtt:
+  host: localhost        # IP of the laptop running Mosquitto during the demo
+  port: 1883
+  topic: "hvac/{device_id}/telemetry"
+  qos: 0
+
+live:
+  seconds_per_step: 5    # real seconds between readings
+  minutes_per_step: 1    # simulated minutes per reading (5 s -> 1 min = 12x speed)
+  start_time: "09:00"    # simulated clock start (today's date is used)
+
+# Optional: also publish every reading to ThingsBoard (device access tokens).
+thingsboard:
+  enabled: false
+  host: localhost
+  port: 1883
+  tokens:
+    AHU-1: ""
+    AHU-2: ""
+    AHU-3: ""
+    AHU-4: ""
+    AHU-5: ""
+    AHU-6: ""
+
+defaults:
+  setpoint_c: 23.0
+  max_cfm: 3000
+  fan_rated_kw: 1.8
+  comp_rated_kw: 7.5
+  schedule_on: "07:00"
+  schedule_off: "18:30"
+  occupied_start: "08:00"
+  occupied_end: "18:00"
+
+devices:
+  - {device_id: AHU-1, zone: Zone-1, max_occupancy: 22, setpoint_c: 23.0}
+  - {device_id: AHU-2, zone: Zone-2, max_occupancy: 26, setpoint_c: 22.5}
+  - {device_id: AHU-3, zone: Zone-3, max_occupancy: 18, setpoint_c: 23.5, solar_peak_kw: 1.1}
+  - {device_id: AHU-4, zone: Zone-4, max_occupancy: 24, setpoint_c: 23.0, solar_peak_kw: 1.8}
+  - {device_id: AHU-5, zone: Zone-5, max_occupancy: 20, setpoint_c: 23.0}
+  - {device_id: AHU-6, zone: Zone-6, max_occupancy: 28, setpoint_c: 24.0, ua_kw_per_c: 0.4}

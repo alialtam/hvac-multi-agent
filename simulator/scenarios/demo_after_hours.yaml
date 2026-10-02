@@ -1,0 +1,4 @@
+name: "Energy demo: AHU-2 left running after hours"
+# Start the simulator with --start 18:45 (the unit should switch off at 18:30).
+steps:
+  - {after_min: 5, cmd: "inject AHU-2 after_hours_waste"}

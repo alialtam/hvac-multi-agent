@@ -1,0 +1,11 @@
+name: "Rehearsal: every fault once on different AHUs"
+# Start at 09:00. Each fault runs on its own AHU, then is reset.
+steps:
+  - {after_min: 15,  cmd: "inject AHU-1 compressor_failure"}
+  - {after_min: 75,  cmd: "reset AHU-1"}
+  - {after_min: 30,  cmd: "inject AHU-4 filter_blockage"}
+  - {after_min: 150, cmd: "reset AHU-4"}
+  - {after_min: 45,  cmd: "inject AHU-3 sensor_stuck"}
+  - {after_min: 120, cmd: "reset AHU-3"}
+  - {after_min: 60,  cmd: "inject AHU-5 refrigerant_leak 90"}
+  - {after_min: 240, cmd: "reset AHU-5"}
