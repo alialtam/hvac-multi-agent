@@ -1,0 +1,27 @@
+# Secrets
+.env
+*.env
+!.env.example
+
+# Python
+__pycache__/
+*.pyc
+venv/
+.venv/
+.pytest_cache/
+
+# Data and models (regenerate with the scripts)
+data/*.db
+data/*.db-*
+data/models/
+data/live/
+
+# Node
+node_modules/
+dashboard/dist/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
