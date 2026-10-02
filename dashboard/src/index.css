@@ -1,0 +1,50 @@
+@import "tailwindcss";
+@import "@fontsource/barlow/400.css";
+@import "@fontsource/barlow/500.css";
+@import "@fontsource/barlow/600.css";
+@import "@fontsource/barlow-semi-condensed/500.css";
+@import "@fontsource/barlow-semi-condensed/600.css";
+@import "@fontsource/barlow-semi-condensed/700.css";
+
+/* Design tokens. Light only: the dashboard is projected, and projectors wash out dark themes. */
+@theme {
+  --font-sans: "Barlow", system-ui, sans-serif;
+  --font-gauge: "Barlow Semi Condensed", "Barlow", system-ui, sans-serif;
+
+  --color-paper: #f2f5f4;      /* page */
+  --color-panel: #ffffff;      /* raised surfaces */
+  --color-plan: #e7eeec;       /* floor-plan floor */
+  --color-wall: #9fb0ad;       /* floor-plan walls, rules */
+  --color-line: #d5dedb;       /* hairlines */
+  --color-ink: #1d2e2c;        /* text */
+  --color-ink-2: #4c5f5c;      /* secondary text */
+  --color-chill: #0e7c86;      /* brand, healthy cooling */
+  --color-chill-soft: #d7ecee;
+  --color-alarm: #d7263d;      /* critical */
+  --color-alarm-soft: #fbe3e6;
+  --color-warn: #b7790a;       /* warning */
+  --color-warn-soft: #f8edd4;
+  --color-off: #8a9794;        /* offline / switched off */
+}
+
+@theme {
+  --color-ink-3: #6f807d;
+}
+
+html, body, #root { height: 100%; }
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  font-variant-numeric: tabular-nums;
+}
+
+:focus-visible { outline: 2px solid var(--color-chill); outline-offset: 2px; border-radius: 4px; }
+
+/* the one orchestrated motion: a zone in alarm breathes */
+@keyframes alarm-breathe { 0%, 100% { opacity: .04; } 50% { opacity: .16; } }
+.alarm-glow { animation: alarm-breathe 2.4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .alarm-glow { animation: none; opacity: .1; } }
