@@ -15,7 +15,7 @@ from __future__ import annotations
 import logging
 import threading
 from collections import deque
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Callable
 
@@ -108,7 +108,7 @@ class DetectionPipeline:
         events = []
         for dev in self.offline.check():
             last = self.buffers.get(dev, [None])[-1] or {}
-            now = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+            now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
             ts = last.get("ts", now)
             event = {
                 "event_id": f"evt_{dev}_offline_{ts.replace('-', '').replace(':', '')}",

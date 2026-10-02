@@ -21,6 +21,7 @@ import json
 import logging
 import os
 import threading
+import uuid
 from typing import Callable
 
 from ..detection.pipeline import DetectionPipeline
@@ -86,10 +87,12 @@ class Ingestion:
     def start(self) -> None:
         if mqtt is None:
             raise RuntimeError("paho-mqtt is not installed: pip install paho-mqtt")
+        # unique name: two clients with the same id make the broker kick one off in a loop
+        client_id = f"hvac-ingestion-{uuid.uuid4().hex[:8]}"
         try:
-            c = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id="hvac-ingestion")
+            c = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id=client_id)
         except AttributeError:  # paho 1.x
-            c = mqtt.Client(client_id="hvac-ingestion")
+            c = mqtt.Client(client_id=client_id)
 
         def on_connect(client, userdata, flags, reason_code, properties=None):
             log.info("connected to mqtt://%s:%s, subscribing to %s", self.host, self.port, self.topic)
@@ -101,8 +104,13 @@ class Ingestion:
             except Exception:
                 log.exception("failed to process message on %s", msg.topic)
 
+        def on_disconnect(client, userdata, *args):
+            if not self._stop.is_set():
+                log.warning("disconnected from MQTT (%s), reconnecting", args[-2] if len(args) >= 2 else args)
+
         c.on_connect = on_connect
         c.on_message = on_message
+        c.on_disconnect = on_disconnect
         c.reconnect_delay_set(min_delay=1, max_delay=10)
         c.connect_async(self.host, self.port, keepalive=30)
         c.loop_start()
