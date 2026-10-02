@@ -1,0 +1,17 @@
+{
+  "device_id": "AHU-4",
+  "zone": "Zone-4",
+  "ts": "2026-09-30T11:30:00Z",
+  "zone_temp_c": 23.28,
+  "supply_temp_c": 12.42,
+  "setpoint_c": 23.0,
+  "humidity_pct": 58.1,
+  "airflow_cfm": 1360.0,
+  "fan_speed_pct": 75.0,
+  "power_kw": 6.47,
+  "occupancy": 21,
+  "co2_ppm": 1441.0,
+  "status": "ON",
+  "outdoor_temp_c": 35.7,
+  "fault_label": "filter_blockage"
+}

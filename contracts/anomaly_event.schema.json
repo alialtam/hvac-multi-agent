@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Anomaly event",
+  "description": "Produced by the Anomaly Detection agent (Person 1), consumed by supervisor.handle(event) (Person 2).",
+  "type": "object",
+  "required": ["event_id", "device_id", "zone", "ts_start", "ts_detected", "method", "score", "severity", "signals", "rule_hits", "window"],
+  "properties": {
+    "event_id":    {"type": "string", "examples": ["evt_AHU-4_20261005T143000"]},
+    "device_id":   {"type": "string"},
+    "zone":        {"type": "string"},
+    "ts_start":    {"type": "string", "format": "date-time", "description": "First reading that looked abnormal"},
+    "ts_detected": {"type": "string", "format": "date-time", "description": "Reading at which the event was confirmed"},
+    "method":      {"type": "string", "enum": ["zscore", "isolation_forest", "combined", "rule"]},
+    "score":       {"type": "number", "minimum": 0, "maximum": 1, "description": "0 = normal, 1 = extremely abnormal"},
+    "severity":    {"type": "string", "enum": ["LOW", "MEDIUM", "HIGH"]},
+    "signals": {
+      "type": "array",
+      "maxItems": 5,
+      "items": {
+        "type": "object",
+        "required": ["key", "value", "baseline", "z"],
+        "properties": {
+          "key":      {"type": "string", "examples": ["zone_temp_c"]},
+          "value":    {"type": "number"},
+          "baseline": {"type": "number", "description": "Expected value for this device at this hour"},
+          "z":        {"type": "number", "description": "Standard deviations away from the baseline"}
+        }
+      }
+    },
+    "rule_hits": {
+      "type": "array",
+      "items": {"type": "string", "enum": ["zone_too_warm", "fast_temp_rise", "low_airflow", "sensor_flatline", "running_unoccupied", "device_offline"]}
+    },
+    "window": {
+      "type": "array",
+      "description": "Up to the last 30 telemetry readings of this device (fault_label removed)",
+      "items": {"type": "object"}
+    }
+  }
+}

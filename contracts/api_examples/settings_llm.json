@@ -1,0 +1,1 @@
+{"provider": "openai", "available": ["openai", "ollama", "rules"], "models": {"openai": "gpt-4o-mini", "ollama": "qwen2.5:1.5b", "rules": null}}

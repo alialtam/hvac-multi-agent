@@ -1,0 +1,31 @@
+{
+  "date": "2026-10-05",
+  "currency": "INR",
+  "tariff_per_kwh": 8.5,
+  "total_kwh_today": 412.6,
+  "baseline_kwh_today": 371.0,
+  "waste_kwh_today": 41.6,
+  "waste_cost_today": 353.6,
+  "devices": [
+    {"device_id": "AHU-1", "kwh_today": 64.2, "baseline_kwh": 63.0, "waste_kwh": 1.2},
+    {"device_id": "AHU-2", "kwh_today": 81.9, "baseline_kwh": 62.5, "waste_kwh": 19.4},
+    {"device_id": "AHU-3", "kwh_today": 60.8, "baseline_kwh": 61.1, "waste_kwh": 0.0},
+    {"device_id": "AHU-4", "kwh_today": 72.3, "baseline_kwh": 61.7, "waste_kwh": 10.6},
+    {"device_id": "AHU-5", "kwh_today": 66.1, "baseline_kwh": 61.9, "waste_kwh": 4.2},
+    {"device_id": "AHU-6", "kwh_today": 67.3, "baseline_kwh": 60.8, "waste_kwh": 6.5}
+  ],
+  "hourly": [
+    {"hour": 0, "kwh": 4.1, "baseline_kwh": 3.9}, {"hour": 1, "kwh": 3.8, "baseline_kwh": 3.8},
+    {"hour": 2, "kwh": 3.7, "baseline_kwh": 3.7}, {"hour": 3, "kwh": 3.6, "baseline_kwh": 3.6},
+    {"hour": 4, "kwh": 3.6, "baseline_kwh": 3.6}, {"hour": 5, "kwh": 3.9, "baseline_kwh": 3.8},
+    {"hour": 6, "kwh": 4.4, "baseline_kwh": 4.2}, {"hour": 7, "kwh": 9.8, "baseline_kwh": 9.1},
+    {"hour": 8, "kwh": 24.6, "baseline_kwh": 23.9}, {"hour": 9, "kwh": 27.1, "baseline_kwh": 26.0},
+    {"hour": 10, "kwh": 29.0, "baseline_kwh": 27.7}, {"hour": 11, "kwh": 30.8, "baseline_kwh": 29.2},
+    {"hour": 12, "kwh": 32.0, "baseline_kwh": 30.1}, {"hour": 13, "kwh": 33.4, "baseline_kwh": 30.6},
+    {"hour": 14, "kwh": 35.9, "baseline_kwh": 30.8}, {"hour": 15, "kwh": 34.2, "baseline_kwh": 30.2},
+    {"hour": 16, "kwh": 31.0, "baseline_kwh": 28.9}, {"hour": 17, "kwh": 27.2, "baseline_kwh": 26.4},
+    {"hour": 18, "kwh": 12.9, "baseline_kwh": 9.0}, {"hour": 19, "kwh": 10.2, "baseline_kwh": 5.1},
+    {"hour": 20, "kwh": 9.9, "baseline_kwh": 4.6}, {"hour": 21, "kwh": 9.4, "baseline_kwh": 4.4},
+    {"hour": 22, "kwh": 5.1, "baseline_kwh": 4.2}, {"hour": 23, "kwh": 4.3, "baseline_kwh": 4.1}
+  ]
+}

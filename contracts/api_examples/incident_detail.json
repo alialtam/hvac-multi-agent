@@ -1,0 +1,108 @@
+{
+  "id": "inc_0007",
+  "device_id": "AHU-4",
+  "zone": "Zone-4",
+  "title": "Possible filter blockage on AHU-4",
+  "severity": "HIGH",
+  "state": "awaiting_approval",
+  "confidence": 0.82,
+  "created_at": "2026-10-05T14:30:00Z",
+  "updated_at": "2026-10-05T14:30:41Z",
+  "llm_provider": "openai",
+  "anomaly_event": {
+    "event_id": "evt_AHU-4_20261005T143000",
+    "method": "combined",
+    "score": 0.81,
+    "ts_start": "2026-10-05T14:21:00Z",
+    "ts_detected": "2026-10-05T14:30:00Z",
+    "rule_hits": [
+      "low_airflow"
+    ],
+    "signals": [
+      {
+        "key": "airflow_cfm",
+        "value": 1340,
+        "baseline": 2250,
+        "z": -15.2
+      },
+      {
+        "key": "power_kw",
+        "value": 7.6,
+        "baseline": 5.5,
+        "z": 5.1
+      },
+      {
+        "key": "supply_temp_c",
+        "value": 11.2,
+        "baseline": 16.0,
+        "z": -4.8
+      }
+    ]
+  },
+  "diagnosis": {
+    "cause": "filter_blockage",
+    "cause_text": "Air filter blockage restricting airflow",
+    "confidence": 0.82,
+    "evidence": [
+      "Airflow fell 40% (2250 to 1340 CFM) in 15 minutes while fan speed stayed at 75%",
+      "Compressor power rose from 5.5 to 7.6 kW to keep the room at 23 °C",
+      "Supply air got colder (16 to 11 °C): less air is passing through the coil",
+      "Similar incident on AHU-4 on 2026-07-12 was a clogged filter"
+    ],
+    "sources": [
+      "manual: Filter maintenance",
+      "incident: INC-2026-07-12-AHU4"
+    ]
+  },
+  "energy": {
+    "extra_kwh_per_day": 21.8,
+    "cost_per_day": 185.3,
+    "currency": "INR",
+    "explanation": "The compressor is working about 2 kW harder to push enough cold air through the blocked filter. If not fixed, AHU-4 wastes about 22 kWh (INR 185) per day."
+  },
+  "recommendation": {
+    "priority": "HIGH",
+    "action": "Inspect and replace the AHU-4 supply air filter",
+    "checklist": [
+      "Switch AHU-4 to maintenance mode",
+      "Inspect the filter bank and replace clogged filters",
+      "Check the filter pressure drop after replacement",
+      "Confirm airflow returns above 2100 CFM at 75% fan speed"
+    ],
+    "estimated_downtime_min": 40,
+    "assign_to": "HVAC technician team"
+  },
+  "trace": [
+    {
+      "ts": "2026-10-05T14:30:00Z",
+      "agent": "monitoring",
+      "message": "Rule fired: low_airflow"
+    },
+    {
+      "ts": "2026-10-05T14:30:00Z",
+      "agent": "anomaly_detection",
+      "message": "Anomaly confirmed (combined score 0.81, HIGH)"
+    },
+    {
+      "ts": "2026-10-05T14:30:02Z",
+      "agent": "supervisor",
+      "message": "Opened incident inc_0007, routing to Diagnosis"
+    },
+    {
+      "ts": "2026-10-05T14:30:19Z",
+      "agent": "diagnosis",
+      "message": "Likely cause: filter blockage (82%)"
+    },
+    {
+      "ts": "2026-10-05T14:30:27Z",
+      "agent": "energy",
+      "message": "Estimated waste 21.8 kWh/day (INR 185)"
+    },
+    {
+      "ts": "2026-10-05T14:30:41Z",
+      "agent": "maintenance",
+      "message": "Drafted HIGH priority ticket, waiting for approval"
+    }
+  ],
+  "ticket_id": null
+}

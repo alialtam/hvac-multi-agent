@@ -1,0 +1,4 @@
+{
+  "incident": {"id": "inc_0007", "state": "rejected", "updated_at": "2026-10-05T14:33:10Z", "rejected_by": "Facility manager", "reason": "Filter was replaced yesterday"},
+  "ticket_id": null
+}

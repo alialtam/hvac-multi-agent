@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "HVAC telemetry message",
+  "description": "One reading from one air handling unit (AHU). Published on MQTT topic hvac/{device_id}/telemetry.",
+  "type": "object",
+  "required": [
+    "device_id", "zone", "ts", "zone_temp_c", "supply_temp_c", "setpoint_c",
+    "humidity_pct", "airflow_cfm", "fan_speed_pct", "power_kw", "occupancy",
+    "co2_ppm", "status", "fault_label"
+  ],
+  "properties": {
+    "device_id":      {"type": "string", "pattern": "^AHU-[0-9]+$", "examples": ["AHU-4"]},
+    "zone":           {"type": "string", "examples": ["Zone-4"]},
+    "ts":             {"type": "string", "format": "date-time", "description": "Simulated time, UTC, ISO 8601 with Z"},
+    "zone_temp_c":    {"type": "number", "description": "Room temperature measured in the zone"},
+    "supply_temp_c":  {"type": "number", "description": "Temperature of the air leaving the AHU"},
+    "setpoint_c":     {"type": "number", "description": "Target zone temperature"},
+    "humidity_pct":   {"type": "number", "minimum": 0, "maximum": 100},
+    "airflow_cfm":    {"type": "number", "minimum": 0, "description": "Supply airflow, cubic feet per minute"},
+    "fan_speed_pct":  {"type": "number", "minimum": 0, "maximum": 100},
+    "power_kw":       {"type": "number", "minimum": 0, "description": "Total electrical power: fan + compressor"},
+    "occupancy":      {"type": "integer", "minimum": 0, "description": "People in the zone"},
+    "co2_ppm":        {"type": "number", "minimum": 0},
+    "status":         {"type": "string", "enum": ["ON", "OFF"]},
+    "outdoor_temp_c": {"type": "number", "description": "Optional. Outdoor air temperature"},
+    "fault_label":    {
+      "type": "string",
+      "enum": ["none", "filter_blockage", "compressor_failure", "refrigerant_leak", "sensor_stuck", "after_hours_waste"],
+      "description": "Ground truth for evaluation ONLY. Agents must never read this field."
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,44 @@
+[
+  {
+    "ts": "2026-10-05T14:30:41Z",
+    "agent": "maintenance",
+    "incident_id": "inc_0007",
+    "device_id": "AHU-4",
+    "message": "Drafted HIGH priority ticket, waiting for approval"
+  },
+  {
+    "ts": "2026-10-05T14:30:27Z",
+    "agent": "energy",
+    "incident_id": "inc_0007",
+    "device_id": "AHU-4",
+    "message": "Estimated waste 21.8 kWh/day (INR 185)"
+  },
+  {
+    "ts": "2026-10-05T14:30:19Z",
+    "agent": "diagnosis",
+    "incident_id": "inc_0007",
+    "device_id": "AHU-4",
+    "message": "Likely cause: filter blockage (82%)"
+  },
+  {
+    "ts": "2026-10-05T14:30:02Z",
+    "agent": "supervisor",
+    "incident_id": "inc_0007",
+    "device_id": "AHU-4",
+    "message": "Opened incident inc_0007, routing to Diagnosis"
+  },
+  {
+    "ts": "2026-10-05T14:30:00Z",
+    "agent": "anomaly_detection",
+    "incident_id": null,
+    "device_id": "AHU-4",
+    "message": "Anomaly confirmed (combined score 0.81, HIGH)"
+  },
+  {
+    "ts": "2026-10-05T14:30:00Z",
+    "agent": "monitoring",
+    "incident_id": null,
+    "device_id": "AHU-4",
+    "message": "Rule fired: low_airflow"
+  }
+]

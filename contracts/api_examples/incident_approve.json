@@ -1,0 +1,4 @@
+{
+  "incident": {"id": "inc_0007", "state": "approved", "updated_at": "2026-10-05T14:33:10Z", "approved_by": "Facility manager", "note": "Send technician today"},
+  "ticket_id": "TCK-0012"
+}
