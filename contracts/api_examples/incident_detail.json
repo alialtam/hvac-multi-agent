@@ -39,6 +39,31 @@
       }
     ]
   },
+  "triage": {
+    "verdict": "equipment_fault",
+    "suspected_area": "airflow",
+    "severity": "HIGH",
+    "confidence": 0.88,
+    "summary": "AHU-4 is moving 40% less air at the same fan speed while using more power. The other units are normal, so this is specific to AHU-4.",
+    "key_evidence": [
+      "Airflow 1,340 CFM vs normal 2,250 CFM (-15.2σ) at a constant 75% fan speed",
+      "Power rose from 5.5 to 7.6 kW over the last 30 minutes",
+      "All sensors are changing normally and within range",
+      "All 5 other units look normal"
+    ],
+    "recommend_next": "diagnosis",
+    "provider": "openai",
+    "rules_verdict": "equipment_fault",
+    "agrees_with_rules": true,
+    "tools_used": [
+      "signal_deviations",
+      "sensor_health",
+      "other_units",
+      "recent_trend"
+    ],
+    "tokens": 3120,
+    "duration_ms": 2870
+  },
   "diagnosis": {
     "cause": "filter_blockage",
     "cause_text": "Air filter blockage restricting airflow",
@@ -82,6 +107,21 @@
       "ts": "2026-10-05T14:30:00Z",
       "agent": "anomaly_detection",
       "message": "Anomaly confirmed (combined score 0.81, HIGH)"
+    },
+    {
+      "ts": "2026-10-05T14:30:00Z",
+      "agent": "anomaly_detection",
+      "message": "Checked sensor health: All sensors are changing normally and within range."
+    },
+    {
+      "ts": "2026-10-05T14:30:00Z",
+      "agent": "anomaly_detection",
+      "message": "Checked other units: All 5 other units look normal, so the problem is specific to AHU-4."
+    },
+    {
+      "ts": "2026-10-05T14:30:00Z",
+      "agent": "anomaly_detection",
+      "message": "Triage: equipment fault, airflow (88% confident). Hand over to Diagnosis agent."
     },
     {
       "ts": "2026-10-05T14:30:02Z",

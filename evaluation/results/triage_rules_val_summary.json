@@ -1,0 +1,12 @@
+{
+  "split": "val",
+  "provider": "rules",
+  "events": 21,
+  "area_accuracy_on_real_faults": 1.0,
+  "false_alarms": 1,
+  "false_alarms_flagged": 0,
+  "real_faults_wrongly_dismissed": 0,
+  "agreement_with_rules": 1.0,
+  "median_ms": 0.0,
+  "total_tokens": 0
+}

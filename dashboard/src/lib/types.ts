@@ -44,6 +44,22 @@ export interface IncidentSummary {
 
 export interface Signal { key: string; value: number; baseline: number | null; z: number }
 
+export interface Triage {
+  verdict: "equipment_fault" | "sensor_fault" | "operational_waste" | "building_wide" | "false_alarm" | "unclear";
+  suspected_area: string;
+  severity: Severity;
+  confidence: number;
+  summary: string;
+  key_evidence: string[];
+  recommend_next: "diagnosis" | "energy" | "maintenance" | "human_review";
+  provider: string;
+  rules_verdict: string;
+  agrees_with_rules: boolean;
+  tools_used: string[];
+  tokens: number;
+  duration_ms: number;
+}
+
 export interface IncidentDetail extends IncidentSummary {
   anomaly_event: {
     event_id: string;
@@ -54,6 +70,7 @@ export interface IncidentDetail extends IncidentSummary {
     rule_hits: string[];
     signals: Signal[];
   };
+  triage?: Triage;
   diagnosis?: { cause: string; cause_text: string; confidence: number; evidence: string[]; sources: string[] };
   energy?: { extra_kwh_per_day: number; cost_per_day: number; currency: string; explanation: string };
   recommendation?: {

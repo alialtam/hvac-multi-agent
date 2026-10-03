@@ -35,6 +35,24 @@
       "type": "array",
       "description": "Up to the last 30 telemetry readings of this device (fault_label removed)",
       "items": {"type": "object"}
+    },
+    "triage": {
+      "type": "object",
+      "description": "OPTIONAL. Added by the triage step of the Anomaly Detection agent (backend/app/detection/triage.py) before the event reaches the Supervisor. recommend_next is a routing hint, not an order.",
+      "required": ["verdict", "suspected_area", "severity", "confidence", "summary", "key_evidence", "recommend_next", "provider"],
+      "properties": {
+        "verdict":          {"type": "string", "enum": ["equipment_fault", "sensor_fault", "operational_waste", "building_wide", "false_alarm", "unclear"]},
+        "suspected_area":   {"type": "string", "enum": ["airflow", "cooling", "sensor", "schedule", "building", "unknown"]},
+        "severity":         {"type": "string", "enum": ["LOW", "MEDIUM", "HIGH"]},
+        "confidence":       {"type": "number", "minimum": 0, "maximum": 1},
+        "summary":          {"type": "string"},
+        "key_evidence":     {"type": "array", "items": {"type": "string"}},
+        "recommend_next":   {"type": "string", "enum": ["diagnosis", "energy", "maintenance", "human_review"]},
+        "provider":         {"type": "string", "enum": ["openai", "ollama", "rules"]},
+        "rules_verdict":    {"type": "string", "description": "What the deterministic rules triage concluded (cross-check)"},
+        "agrees_with_rules": {"type": "boolean"},
+        "tools_used":       {"type": "array", "items": {"type": "string"}}
+      }
     }
   }
 }
