@@ -45,6 +45,23 @@ Schema: `contracts/anomaly_event.schema.json`. Real example: `contracts/sample_a
 
 `device_offline` events have empty `signals`; the window holds the last readings before it went silent.
 
+**Triage (optional field `triage`).** Person 1's triage agent (`app/detection/triage.py`) checks each
+event with an LLM and tools and adds a verdict, the suspected area, evidence and `recommend_next`
+(`diagnosis` / `energy` / `maintenance` / `human_review`). The Supervisor can use `recommend_next`
+as a routing hint and pass `key_evidence` to the Diagnosis prompt. To get events with triage attached:
+
+```python
+from app.detection.triage import TriageWorker
+
+triage = TriageWorker(on_done=lambda event, report: supervisor.handle({**event, "triage": report}),
+                      store=ingestion.store, pipeline=ingestion.pipeline,
+                      provider_fn=lambda: current_provider)       # "openai" | "ollama" | "rules"
+ingestion.on_event = triage.submit
+```
+
+`report["steps"]` holds its execution-trace lines (same format as yours, `from: anomaly_detection`);
+add them to the incident's trace. `dev_api.py` shows the full wiring.
+
 ## 3. Fault signatures (for prompts and the rule-based baseline)
 
 Measured from the simulator; good material for the knowledge base and for your if/then baseline.

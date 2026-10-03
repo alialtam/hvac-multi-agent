@@ -119,6 +119,54 @@ HIGH are raised at once. Each event (contract: `contracts/anomaly_event.schema.j
 five most deviating sensors with their normal values, the rules that fired and the last 30
 readings, which the Diagnosis agent uses as context.
 
+## 4.3 Triage step: the agentic part of the Anomaly Detection agent
+
+The detectors say *that* a unit is abnormal. Before the Supervisor spends effort on it, an LLM
+triage step decides *what kind* of problem it is and whether it is real
+(`backend/app/detection/triage.py`). It does not name a root cause or a repair; those belong
+to the Diagnosis and Maintenance agents.
+
+**Tools, chosen by the LLM.** The agent receives the event and decides which checks to run,
+calling plain Python tools (`triage_tools.py`) through OpenAI function calling:
+
+| Tool | What it returns |
+| --- | --- |
+| `signal_deviations` | sensors furthest from this unit's normal value, rules that fired |
+| `recent_trend` | how each sensor moved over the last 5-60 min, airflow per % fan speed |
+| `sensor_health` | frozen, out-of-range or missing sensors |
+| `other_units` | whether other units are abnormal at the same time (building-wide cause) |
+| `schedule_context` | time vs operating schedule, occupancy, unit status |
+| `device_history` | earlier anomalies on the same unit |
+
+When it has enough evidence it calls `submit_triage` with a verdict (equipment fault, sensor
+fault, operational waste, building-wide, false alarm, unclear), the suspected area (airflow,
+cooling, sensor, schedule), a confidence, 2-4 pieces of evidence with numbers, and a routing hint
+for the Supervisor (Diagnosis, Energy, Maintenance or human review). The answer is validated
+against a Pydantic schema.
+
+**Robustness.** An invalid answer is sent back once with the validation error. A timeout,
+network error, missing API key, a second invalid answer or more than six rounds switches to a
+deterministic rules triage that uses the same tools in a fixed order. The rules verdict is also
+stored next to every LLM verdict, so disagreements are visible on the dashboard and in the
+trace. Triage runs in a background thread: the incident appears at once and the triage is added
+seconds later, so ingestion is never slowed down. Every LLM call, tool call, retry and fallback
+is recorded as an execution-trace line (`GET /incidents/{id}/trace`).
+
+**Results (rules triage).** Ground truth is the area of the injected fault (filter → airflow,
+compressor and refrigerant → cooling, stuck sensor → sensor, after-hours → schedule). The rules
+were tuned on the validation set (20/20 correct after adding "more power at normal airflow →
+cooling" for early refrigerant leaks), then run once on the test set:
+
+| Test set (57 detector events) | Result |
+| --- | --- |
+| Real-fault events with the correct area | 50/51 (98%) |
+| Real faults wrongly dismissed | 1 (compressor failure while 3 other units were abnormal → "building-wide") |
+| False alarms recognised as false alarm / building-wide | 0/6 |
+
+All six false alarms occur between 08:00 and 09:15 during the morning warm-up; the fixed rules
+cannot tell them from real faults. The LLM triage is evaluated on the same events with
+`python evaluation/evaluate_triage.py --split test --provider openai`; the results are added here after that run.
+
 ## 5.1 Results
 
 ![Time to detect](../evaluation/results/fig_time_to_detect.png)
