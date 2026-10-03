@@ -52,3 +52,11 @@ def test_offline_device_raises_event(ingestion):
     assert events and events[-1]["rule_hits"] == ["device_offline"]
     assert ing.pipeline.health(rec["device_id"]) == "offline"
     assert ing.store.recent_events()[0]["rule_hits"] == ["device_offline"]
+
+
+def test_empty_database_url_uses_default(monkeypatch):
+    # .env.example ships "DATABASE_URL=" (empty): that must mean "use the SQLite default", not crash
+    from app.ingestion.db import DEFAULT_URL
+    for value in ("", "   ", "# empty = SQLite file data/hvac.db"):
+        monkeypatch.setenv("DATABASE_URL", value)
+        assert str(get_engine().url) == DEFAULT_URL
