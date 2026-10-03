@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { api } from "../lib/api";
 import { AGENTS, PROVIDER_LABEL, RULES, SIGNALS, dateTime, money, num, pct, time } from "../lib/format";
 import { usePoll } from "../lib/live";
-import type { IncidentDetail } from "../lib/types";
+import type { IncidentDetail, Triage } from "../lib/types";
 import { AGENT_COLOR } from "../components/ActivityFeed";
 import { ErrorNote, Loading, Meter, Panel, SeverityTag, StateText } from "../components/ui";
 
@@ -75,6 +75,8 @@ function IncidentView({ id }: { id: string }) {
       </header>
 
       <Decision inc={inc} onDone={refresh} />
+
+      <TriagePanel triage={inc.triage} />
 
       <div className="grid gap-5 xl:grid-cols-2">
         <Panel title="What the sensors show">
@@ -177,6 +179,49 @@ function IncidentView({ id }: { id: string }) {
         </ol>
       </Panel>
     </article>
+  );
+}
+
+const VERDICT: Record<Triage["verdict"], { word: string; color: string }> = {
+  equipment_fault: { word: "Equipment fault", color: "text-alarm" },
+  sensor_fault: { word: "Sensor fault", color: "text-[#8a5a05]" },
+  operational_waste: { word: "Energy waste", color: "text-[#8a5a05]" },
+  building_wide: { word: "Building-wide change", color: "text-ink-2" },
+  false_alarm: { word: "Probably a false alarm", color: "text-ink-2" },
+  unclear: { word: "Unclear", color: "text-ink-2" },
+};
+const NEXT_WORD: Record<Triage["recommend_next"], string> = {
+  diagnosis: "Diagnosis agent", energy: "Energy agent", maintenance: "Maintenance agent", human_review: "a person",
+};
+
+function TriagePanel({ triage: t }: { triage?: Triage }) {
+  return (
+    <Panel title="First look" action={<span className="text-[12.5px] text-ink-3">Anomaly Detection agent</span>}>
+      {!t ? (
+        <p className="px-4 py-4 text-[14px] text-ink-2">Checking the evidence…</p>
+      ) : (
+        <div className="px-4 py-4">
+          <div className="flex flex-wrap items-baseline justify-between gap-3">
+            <p className={`font-gauge text-[22px] font-semibold leading-tight ${VERDICT[t.verdict].color}`}>
+              {VERDICT[t.verdict].word}
+              <span className="ml-2 text-[15px] font-medium text-ink-2">area: {t.suspected_area}</span>
+            </p>
+            <Meter value={t.confidence} />
+          </div>
+          <p className="mt-2 text-[15px]">{t.summary}</p>
+          <ul className="mt-3 space-y-1.5 text-[14px]">
+            {t.key_evidence.map((e) => (
+              <li key={e} className="flex gap-2"><span className="mt-[9px] h-1 w-1 shrink-0 rounded-full bg-ink-2" aria-hidden />{e}</li>
+            ))}
+          </ul>
+          <p className="mt-3 text-[13px] text-ink-2">
+            Handed to the {NEXT_WORD[t.recommend_next]}. Checked {t.tools_used.length ? t.tools_used.map((x) => x.replace(/_/g, " ")).join(", ") : "nothing"}
+            {" "}with {PROVIDER_LABEL[t.provider] ?? t.provider} in {num(t.duration_ms / 1000, 1)} s.
+            {t.provider !== "rules" && (t.agrees_with_rules ? " The rule-based check agrees." : ` The rule-based check said "${t.rules_verdict.replace(/_/g, " ")}".`)}
+          </p>
+        </div>
+      )}
+    </Panel>
   );
 }
 
