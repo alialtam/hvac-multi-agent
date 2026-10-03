@@ -1,5 +1,6 @@
-# Secrets
+# Secrets (any .env file, e.g. .env, .env.local; only the example is shared)
 .env
+.env.*
 *.env
 !.env.example
 
