@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import sys
+import uuid
 
 try:
     import paho.mqtt.client as mqtt
@@ -11,6 +12,7 @@ except ImportError:  # console mode still works without paho
 
 
 def _new_client(client_id: str):
+    client_id = f"{client_id}-{uuid.uuid4().hex[:8]}"   # unique, so two copies never kick each other off
     if mqtt is None:
         raise RuntimeError("paho-mqtt is not installed: pip install paho-mqtt")
     try:  # paho-mqtt 2.x
