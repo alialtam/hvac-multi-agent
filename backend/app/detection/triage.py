@@ -99,7 +99,8 @@ Verdicts:
 
 Useful physics: restricted airflow shows as less airflow at the same fan speed, often with higher
 power and colder supply air. Lost cooling shows as warmer supply air, a smaller coil temperature
-drop and a warming room. A frozen sensor shows identical readings while other signals move.
+drop and a warming room. A frozen sensor shows identical readings while other signals move. The rule device_offline means
+the unit sent no data at all (network, controller or power): verdict sensor_fault, area sensor, maintenance.
 
 recommend_next: diagnosis for equipment faults, energy for operational waste, maintenance for
 sensor faults, human_review for building_wide, false_alarm or anything you are unsure about.
@@ -138,7 +139,12 @@ def rules_triage(event: dict, tools: TriageTools) -> tuple[dict, list[dict]]:
     health, others, sched = res["sensor_health"], res["other_units"], res["schedule_context"]
     ev = [res["signal_deviations"]["note"]]
 
-    if health.get("frozen") or health.get("out_of_range") or "sensor_flatline" in rules:
+    if "device_offline" in rules:
+        # no data at all: a network, controller or power problem, not something the sensors can explain
+        d = dict(verdict="sensor_fault", suspected_area="sensor", recommend_next="maintenance", confidence=0.9)
+        ev = [f"{event['device_id']} stopped sending data; last reading at {event['ts_detected'][11:16]}"] + \
+             ([others["note"]] if others.get("checked") else [])
+    elif health.get("frozen") or health.get("out_of_range") or "sensor_flatline" in rules:
         d = dict(verdict="sensor_fault", suspected_area="sensor", recommend_next="maintenance", confidence=0.8)
         ev = [health["note"]] + ev
     elif len(others.get("abnormal", [])) >= 3:
@@ -166,7 +172,7 @@ def rules_triage(event: dict, tools: TriageTools) -> tuple[dict, list[dict]]:
     else:
         d = dict(verdict="unclear", suspected_area="unknown", recommend_next="diagnosis", confidence=0.5)
 
-    if d["verdict"] != "building_wide" and others.get("checked"):
+    if d["verdict"] != "building_wide" and others.get("checked") and others["note"] not in ev:
         ev.append(others["note"])
     decision = TriageDecision(severity=sev, summary=_summary(event, d), key_evidence=ev[:4], **d)
     steps.append(_step("decision", "supervisor", decision.model_dump(), "rules"))
@@ -182,6 +188,8 @@ def _summary(event: dict, d: dict) -> str:
     dev = event["device_id"]
     if d["verdict"] == "false_alarm":
         return f"The deviation on {dev} is small and not backed by any rule; probably a false alarm."
+    if "device_offline" in event.get("rule_hits", []):
+        return f"{dev} stopped sending data. Check its network connection, controller and power supply."
     if d["verdict"] == "building_wide":
         return f"Several units changed at the same time as {dev}; this looks like {AREA_TEXT['building']}, not a fault on one unit."
     top = [s for s in event.get("signals", []) if abs(s.get("z", 0)) >= 3][:2]

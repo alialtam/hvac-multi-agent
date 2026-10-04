@@ -167,6 +167,24 @@ All six false alarms occur between 08:00 and 09:15 during the morning warm-up; t
 cannot tell them from real faults. The LLM triage is evaluated on the same events with
 `python evaluation/evaluate_triage.py --split test --provider openai`; the results are added here after that run.
 
+## 4.4 Robustness: input validation and fault injection
+
+**Input validation.** Every MQTT message is checked before it is stored or analysed
+(`backend/app/ingestion/validation.py`): valid JSON, a known device id format, a readable
+timestamp, ON/OFF status, every required value present, numeric and finite, and inside
+physically possible limits (e.g. room temperature -10 to 60 °C, humidity 0-100 %, power >= 0).
+A broken message is rejected with a reason, counted and listed on the dashboard; the system
+keeps running. The limits were checked against all 276,480 readings of the four datasets: none
+of them was rejected, so the validation never discards real data (including all fault periods).
+
+**Controlled fault injection.** The dashboard's Simulator page sends commands through the API
+to the simulator over MQTT. Commands are validated twice: by the API (a Pydantic model: allowed
+actions, unit ids, fault names, time format, numeric ranges; anything else returns HTTP 422 before
+it is sent) and by the simulator (a fixed list of allowed commands; no shutdown, no file paths).
+The "send a broken reading" buttons (impossible value, missing value, not JSON, negative power)
+demonstrate the validation live. A unit taken offline raises a `device_offline` event within
+30 s, which the triage agent classifies as a maintenance case.
+
 ## 5.1 Results
 
 ![Time to detect](../evaluation/results/fig_time_to_detect.png)

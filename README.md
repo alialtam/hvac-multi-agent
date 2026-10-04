@@ -84,6 +84,13 @@ Both laptops on the same phone hotspot. Find Laptop B's IP with `ipconfig` (e.g.
 - **Laptop A (data + screen):** `python main.py --host 192.168.43.20 --start 10:30` and the dashboard with `VITE_API_URL=http://192.168.43.20:8000`.
 - Allow ports 1883, 8000 and 5173 in Windows Defender Firewall on Laptop B when Windows asks (tick "Private networks").
 
+### Controlling the simulator from the dashboard
+
+The **Simulator** page (left menu) does everything below with buttons: inject a fault on any unit,
+reset, take a unit offline, change speed, jump the clock, run a scripted scenario, and send a
+deliberately broken reading to show input validation. Commands go dashboard -> API -> MQTT
+(`hvac/sim/control`) -> simulator, and are validated on both sides. The terminal commands still work.
+
 ### Simulator commands
 
 | Command | Effect |
@@ -98,6 +105,7 @@ Both laptops on the same phone hotspot. Find Laptop B's IP with `ipconfig` (e.g.
 | `jump 19:00` | move the building clock forward |
 | `speed 2` | one reading every 2 s instead of 5 s |
 | `run scenarios/demo_filter.yaml` | scripted demo (also `demo_after_hours.yaml`, `all_faults.yaml`) |
+| `corrupt AHU-3 spike` | send ONE broken reading (`spike`, `missing`, `text`, `negative`): the backend must reject it |
 
 At the default speed one reading = one simulated minute every 5 seconds (12x faster than real time).
 

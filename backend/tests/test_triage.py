@@ -150,3 +150,10 @@ def test_worker_runs_in_background():
     TriageWorker(on_done=on_done).submit(load("AHU-3"))
     assert done.wait(5)
     assert got["report"]["verdict"] == "sensor_fault" and got["event"]["device_id"] == "AHU-3"
+
+
+def test_offline_unit_is_a_maintenance_case():
+    e = {**load("AHU-4"), "rule_hits": ["device_offline"], "signals": [], "method": "rule"}
+    r = triage_event(e, provider="rules")
+    assert r["verdict"] == "sensor_fault" and r["recommend_next"] == "maintenance"
+    assert "stopped sending data" in r["summary"]
