@@ -18,7 +18,7 @@ React dashboard <───────────── FastAPI REST + WebSocke
 | `contracts/` | everyone | The agreed data formats. Change only together. |
 | `simulator/` | Ali | Physics-based HVAC simulator, 5 fault types, dataset generator |
 | `backend/app/ingestion/` | Ali | MQTT subscriber, SQLite telemetry store |
-| `backend/app/detection/` | Ali | Monitoring agent (rules) + Anomaly Detection agent (z-score, Isolation Forest) |
+| `backend/app/detection/` | Ali | Monitoring agent (rules) + Anomaly Detection agent (z-score, Isolation Forest, LLM triage with tools) |
 | `backend/app/dev_api.py` | Ali | Stand-in API with live data until the real backend exists |
 | `evaluation/` | Ali (detection), Abdulelah (diagnosis) | Experiments, metrics, charts for the report |
 | `dashboard/` | Ali | React dashboard |
@@ -73,6 +73,7 @@ Four terminals, each with `venv\Scripts\activate`:
 | 3 | `cd simulator` then `python main.py --start 10:30` | type commands here, e.g. `inject AHU-4 filter_blockage` |
 | 4 | `cd dashboard`, create `.env.local` with `VITE_API_URL=http://localhost:8000`, then `npm run dev` | dashboard, top bar says **Live** |
 
+For AI triage, copy `.env.example` to `.env` in the repo root and set `OPENAI_API_KEY` (without a key it uses rules).
 Once Person 2's backend exists, terminal 2 runs their app instead of `dev_api`.
 
 ## Run it on two laptops (the demo)

@@ -9,7 +9,8 @@ Example responses live in `api_examples/<file>.json` (file name in the table).
 | GET | `/devices` | `devices.json` | Latest reading + health per AHU. `health`: `ok` \| `warning` \| `critical` \| `offline` |
 | GET | `/devices/{id}/telemetry?minutes=60` | `device_telemetry.json` | Oldest first. Same fields as the telemetry contract, without `fault_label` |
 | GET | `/incidents` | `incidents.json` | Newest first. `state`: `investigating` \| `awaiting_approval` \| `approved` \| `rejected` \| `resolved` |
-| GET | `/incidents/{id}` | `incident_detail.json` | Full incident incl. diagnosis, energy, recommendation, agent trace |
+| GET | `/incidents/{id}` | `incident_detail.json` | Full incident incl. triage, diagnosis, energy, recommendation, agent trace |
+| GET | `/incidents/{id}/trace` | (list of trace lines) | Full execution trace: every LLM call, tool call and decision, format in `backend/app/agents/README.md` |
 | POST | `/incidents/{id}/approve` | `incident_approve.json` | Body: `{"operator": "name", "note": "optional"}`. Returns the updated incident + ticket id |
 | POST | `/incidents/{id}/reject` | `incident_reject.json` | Body: `{"operator": "name", "reason": "required"}` |
 | GET | `/tickets` | `tickets.json` | Newest first |

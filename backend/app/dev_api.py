@@ -5,8 +5,8 @@
 
 Implements the data endpoints (devices, telemetry, WebSocket) and turns each
 anomaly event into a simple incident, so the dashboard can be rehearsed with
-the real simulator before the agent backend exists. It has NO agents: incidents
-stay in "Agents investigating" and there is no diagnosis.
+the real simulator before the agent backend exists. The only agent it runs is
+the anomaly triage agent (Person 1); there is no diagnosis, energy or ticket yet.
 
 Person 2: the device, telemetry and WebSocket parts can be copied into the real
 backend as they are. Everything about incidents, tickets, energy and settings
@@ -23,10 +23,18 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
+from .config import env
+from .detection.triage import TriageWorker
 from .ingestion.subscriber import Ingestion
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
-EXAMPLES = Path(__file__).resolve().parents[2] / "contracts" / "api_examples"
+ROOT = Path(__file__).resolve().parents[2]
+EXAMPLES = ROOT / "contracts" / "api_examples"
+try:  # OPENAI_API_KEY etc. from the .env file in the repo root
+    from dotenv import load_dotenv
+    load_dotenv(ROOT / ".env")
+except ImportError:
+    pass
 
 
 class Hub:
@@ -52,7 +60,12 @@ class Hub:
 hub = Hub()
 incidents: dict[str, dict] = {}
 activity: list[dict] = []
-settings = json.loads((EXAMPLES / "settings_llm.json").read_text())
+settings = {"provider": env("LLM_PROVIDER", "openai"),
+            "available": ["openai", "ollama", "rules"],
+            "models": {"openai": env("OPENAI_MODEL", "gpt-4o-mini"),
+                       "ollama": env("OLLAMA_MODEL", "qwen2.5:1.5b"), "rules": None}}
+traces: dict[str, list[dict]] = {}     # full execution trace per incident (JSON lines format)
+by_event: dict[str, str] = {}          # event_id -> incident id
 
 
 def on_event(e: dict) -> None:
@@ -76,11 +89,60 @@ def on_event(e: dict) -> None:
     step = {"ts": e["ts_detected"], "agent": "anomaly_detection", "incident_id": inc_id,
             "device_id": e["device_id"], "message": f"Anomaly confirmed ({e['severity']}): {rule_names}"}
     activity.insert(0, step)
+    by_event[e["event_id"]] = inc_id
     hub.publish("incident", summary)
+    hub.publish("agent_step", step)
+    triage.submit(e)
+
+
+TITLE = {"airflow": "Airflow problem", "cooling": "Cooling problem", "sensor": "Sensor fault",
+         "schedule": "Running out of hours", "building": "Building-wide change"}
+NEXT = {"diagnosis": "Diagnosis agent", "energy": "Energy agent", "maintenance": "Maintenance agent",
+        "human_review": "a person"}
+
+
+def _step_message(s: dict) -> str | None:
+    c = s["content"]
+    if s["type"] == "tool_call":
+        return f"Checked {s['to'].split(':', 1)[1].replace('_', ' ')}: {c['result'].get('note', '')}"
+    if s["type"] == "fallback":
+        return f"LLM not used ({c['reason']}); triaged with rules."
+    if s["type"] == "retry":
+        return "LLM answer was invalid; asked it to correct it."
+    return None
+
+
+def on_triage(e: dict, report: dict) -> None:
+    inc_id = by_event.get(e["event_id"])
+    if not inc_id:
+        return
+    inc = incidents[inc_id]
+    for s in report["steps"]:
+        s["incident_id"] = inc_id
+    traces[inc_id] = traces.get(inc_id, []) + report["steps"]
+    inc["triage"] = {k: v for k, v in report.items() if k != "steps"}
+    inc["llm_provider"] = report["provider"]
+    if report["verdict"] == "false_alarm":
+        inc["title"] = f"Possible false alarm on {e['device_id']}"
+    elif report["suspected_area"] in TITLE:
+        inc["title"] = f"{TITLE[report['suspected_area']]} on {e['device_id']}"
+    inc["severity"] = report["severity"]
+    ts = e["ts_detected"]
+    msgs = [m for m in map(_step_message, report["steps"]) if m]
+    verdict = report["verdict"].replace("_", " ")
+    msgs.append(f"Triage: {verdict}, {report['suspected_area']} ({report['confidence']:.0%} confident). "
+                f"Hand over to {NEXT[report['recommend_next']]}.")
+    inc["trace"] += [{"ts": ts, "agent": "anomaly_detection", "message": m} for m in msgs]
+    step = {"ts": ts, "agent": "anomaly_detection", "incident_id": inc_id, "device_id": e["device_id"],
+            "message": f"Triage ({report['provider']}): {verdict}, {report['summary']}"}
+    activity.insert(0, step)
+    hub.publish("incident", {k: v for k, v in inc.items() if k not in ("anomaly_event", "trace", "ticket_id", "triage")})
     hub.publish("agent_step", step)
 
 
 ingestion = Ingestion(on_event=on_event, on_reading=lambda r: hub.publish("telemetry", r))
+triage = TriageWorker(on_done=on_triage, store=ingestion.store, pipeline=ingestion.pipeline,
+                      provider_fn=lambda: settings["provider"])
 
 
 @asynccontextmanager
@@ -118,7 +180,7 @@ def telemetry(device_id: str, minutes: int = 60):
 
 @app.get("/incidents")
 def list_incidents():
-    return sorted(({k: v for k, v in i.items() if k not in ("anomaly_event", "trace", "ticket_id")}
+    return sorted(({k: v for k, v in i.items() if k not in ("anomaly_event", "trace", "ticket_id", "triage")}
                    for i in incidents.values()), key=lambda x: x["created_at"], reverse=True)
 
 
@@ -127,6 +189,14 @@ def get_incident(inc_id: str):
     if inc_id not in incidents:
         raise HTTPException(404, f"Incident {inc_id} not found")
     return incidents[inc_id]
+
+
+@app.get("/incidents/{inc_id}/trace")
+def get_trace(inc_id: str):
+    """Full execution trace (every LLM call, tool call and decision) for the report."""
+    if inc_id not in incidents:
+        raise HTTPException(404, f"Incident {inc_id} not found")
+    return traces.get(inc_id, [])
 
 
 @app.get("/agents/activity")

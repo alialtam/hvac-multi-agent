@@ -13,12 +13,13 @@ because the simulator clock runs 12x faster than the wall clock.
 """
 from __future__ import annotations
 
-import os
 from datetime import datetime, timedelta
 from pathlib import Path
 
 from sqlalchemy import (JSON, Column, DateTime, Float, Integer, MetaData, String, Table, create_engine, event,
                         func, insert, select)
+
+from ..config import env
 
 ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_URL = f"sqlite:///{(ROOT / 'data' / 'hvac.db').as_posix()}"
@@ -63,7 +64,7 @@ def _fmt_ts(ts: datetime) -> str:
 
 
 def get_engine(url: str | None = None):
-    url = url or os.getenv("DATABASE_URL", DEFAULT_URL)
+    url = url or env("DATABASE_URL", DEFAULT_URL)
     if url.startswith("sqlite:///"):
         Path(url.removeprefix("sqlite:///")).parent.mkdir(parents=True, exist_ok=True)
     engine = create_engine(url, connect_args={"check_same_thread": False} if url.startswith("sqlite") else {})
