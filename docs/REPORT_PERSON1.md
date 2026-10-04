@@ -152,20 +152,60 @@ trace. Triage runs in a background thread: the incident appears at once and the 
 seconds later, so ingestion is never slowed down. Every LLM call, tool call, retry and fallback
 is recorded as an execution-trace line (`GET /incidents/{id}/trace`).
 
-**Results (rules triage).** Ground truth is the area of the injected fault (filter → airflow,
-compressor and refrigerant → cooling, stuck sensor → sensor, after-hours → schedule). The rules
-were tuned on the validation set (20/20 correct after adding "more power at normal airflow →
-cooling" for early refrigerant leaks), then run once on the test set:
+**Evaluation.** Ground truth is the area of the injected fault (filter -> airflow, compressor and
+refrigerant -> cooling, stuck sensor -> sensor, after-hours -> schedule). Events outside any fault are
+false alarms; the triage should call them false alarm or building-wide. Every event the detector
+raised is triaged (`evaluation/evaluate_triage.py`).
 
-| Test set (57 detector events) | Result |
-| --- | --- |
-| Real-fault events with the correct area | 50/51 (98%) |
-| Real faults wrongly dismissed | 1 (compressor failure while 3 other units were abnormal → "building-wide") |
-| False alarms recognised as false alarm / building-wide | 0/6 |
+*Version 1.* The rules were tuned on the validation set (20/20 after adding "more power at normal
+airflow -> cooling" for early refrigerant leaks) and run once on the test set; the LLM (gpt-4o-mini)
+was run on the same test events:
 
-All six false alarms occur between 08:00 and 09:15 during the morning warm-up; the fixed rules
-cannot tell them from real faults. The LLM triage is evaluated on the same events with
-`python evaluation/evaluate_triage.py --split test --provider openai`; the results are added here after that run.
+| Test set, 57 events (51 real faults, 6 false alarms) | Rules v1 | LLM v1 |
+| --- | --- | --- |
+| Real-fault events with the correct area | 50/51 (98%) | 26/51 (51%) |
+| Real faults wrongly dismissed as building-wide | 1 | 11 |
+| False alarms recognised | 0/6 | 0/6 |
+| Agreement with the rules | - | 65% |
+
+*Error analysis of LLM v1* (`evaluation/results/triage_openai_test.csv`). The failures fell into three
+patterns, none of them random:
+1. **Overlapping faults read as a shared cause** (11 real faults dismissed). The test set often has
+   faults on several units at once; `other_units` reported "AHU-2, AHU-4 also unusual" and the LLM
+   concluded "building-wide" even when this unit had a deviation of 17σ. The one rules error was the
+   same case.
+2. **After-hours waste called an airflow fault** (6 of 10). At night the normal airflow is 0, so a unit
+   left running shows airflow +25σ; the LLM often did not check the schedule.
+3. **Early refrigerant leaks called "unknown"** (11 of 11). Only power rises (about +4σ) while airflow
+   and temperatures look normal; the LLM lacked the physical interpretation.
+
+*Version 2* (changes made and checked on the validation set only): `other_units` now states that units
+can have separate faults and that a building-wide cause is possible only when 3+ other units are
+abnormal **and** this unit's own deviation is mild (below 6σ), and the rules use the same definition;
+the event brief states the time against the operating schedule; the prompt lists the HVAC patterns in
+priority order (after-hours, sensor, airflow, cooling, "more power at normal airflow = loss of cooling
+capacity", building-wide). Because the test set had now been seen, version 2 was evaluated on a
+**fresh holdout set** generated afterwards with a new seed (2028; 12 days, 50 injections), never used
+for any decision:
+
+| Holdout set, 59 events (53 real faults, 6 false alarms) | Rules v2 | LLM v2 |
+| --- | --- | --- |
+| Real-fault events with the correct area | **53/53 (100%)** | **53/53 (100%)** |
+| Real faults wrongly dismissed | 0 | 0 |
+| False alarms recognised | 0/6 | 0/6 |
+| Agreement with the rules | - | 98% |
+| Median time per event | <1 ms | 4.4 s |
+| Tokens for all 59 events | 0 | 303k (about 5 US cents) |
+
+**Discussion.** The LLM did not beat the hand-written rules at classification; with the right tool
+outputs and domain knowledge it matched them. Its value in the system is different: it chooses which
+checks to run, explains the evidence in plain language for the operator and the next agent, and the
+rules verdict stored beside it acts as a safety check (they disagreed on 1 of 59 events). The first
+version shows the main risk of LLM agents: they over-trust ambiguous tool output ("other units are
+abnormal") and lack physical knowledge unless it is given to them. Neither method recognises the false
+alarms: all of them occur in the morning warm-up (08:00-09:15, as in the test set) and look like real
+cooling problems in every signal available; reducing them belongs to the detector (a longer start-up
+mask), not to the triage.
 
 ## 4.4 Robustness: input validation and fault injection
 

@@ -1,0 +1,12 @@
+{
+  "split": "test",
+  "provider": "openai",
+  "events": 57,
+  "area_accuracy_on_real_faults": 0.51,
+  "false_alarms": 6,
+  "false_alarms_flagged": 0,
+  "real_faults_wrongly_dismissed": 11,
+  "agreement_with_rules": 0.649,
+  "median_ms": 5018.0,
+  "total_tokens": 248831
+}
