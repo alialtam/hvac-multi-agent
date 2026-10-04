@@ -1,3 +1,4 @@
+from app.llm import FakeProvider, ProviderError
 import pytest
 import app.knowledge  # noqa: F401  (registers the rules fallback)
 from app.agents.diagnosis import diagnose, strip_label
@@ -52,3 +53,30 @@ def test_critique_and_more_evidence_reach_prompt(monkeypatch):
     monkeypatch.setattr(llm, "complete", fake)
     diagnose(ev({}), more_evidence=True, critique="power went up, not down")
     assert "power went up" in seen["prompt"]
+
+GOOD = {"cause": "filter_blockage", "cause_text": "Air filter blockage",
+        "confidence": 0.9, "evidence": ["airflow low"], "sources": ["manual: Filter maintenance"]}
+
+
+def use_fake(monkeypatch, responses):
+    fake = FakeProvider(responses)
+    monkeypatch.setattr(llm, "providers", {"fake": fake})
+    llm.set_provider("fake")
+    return fake
+
+
+def test_bad_json_is_retried_then_succeeds(monkeypatch):
+    fake = use_fake(monkeypatch, ["this is not json", GOOD])
+    d, meta = diagnose(ev({"airflow_cfm": -15}, ["low_airflow"]))
+    assert meta["provider"] == "fake" and meta["attempts"] == 2 and fake.calls == 2
+    assert d.cause == "filter_blockage"
+
+
+def test_provider_failure_falls_back_to_rules_and_is_logged(monkeypatch):
+    use_fake(monkeypatch, [ProviderError("timeout"), ProviderError("timeout")])
+    records = []
+    monkeypatch.setattr(llm, "log_hook", records.append)
+    d, meta = diagnose(ev({}, ["sensor_flatline"]))
+    assert meta["provider"] == "rules" and "fake" in meta["fallbacks"]
+    assert d.cause == "sensor_stuck"
+    assert any(r.get("ok") is False and r.get("provider") == "fake" for r in records)
