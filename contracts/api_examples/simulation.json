@@ -1,0 +1,41 @@
+{
+  "connected": true,
+  "running": true,
+  "clock": "2026-10-05T14:30:00Z",
+  "seconds_per_reading": 5,
+  "devices": [
+    "AHU-1",
+    "AHU-2",
+    "AHU-3",
+    "AHU-4",
+    "AHU-5",
+    "AHU-6"
+  ],
+  "faults": [
+    {
+      "device_id": "AHU-4",
+      "fault": "filter_blockage",
+      "since": "2026-10-05T14:10:00Z"
+    }
+  ],
+  "offline": [],
+  "fault_types": [
+    "filter_blockage",
+    "compressor_failure",
+    "refrigerant_leak",
+    "sensor_stuck",
+    "after_hours_waste"
+  ],
+  "corrupt_kinds": [
+    "spike",
+    "missing",
+    "text",
+    "negative"
+  ],
+  "scenarios": [
+    "all_faults",
+    "demo_after_hours",
+    "demo_filter"
+  ],
+  "pending_scenario_steps": 0
+}

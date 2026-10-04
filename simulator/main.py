@@ -13,6 +13,7 @@ Commands (type into the running terminal, then Enter):
     jump 19:00                                move the simulated clock (same day)
     speed 5                                   real seconds per reading
     status                                    show clock, faults and offline devices
+    corrupt AHU-3 [spike|missing|text|negative]  send ONE broken reading (tests input validation)
     run scenarios/demo_filter.yaml            run a scripted scenario
     help | quit
 """
@@ -26,13 +27,18 @@ import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+import json
+import random
+
 import yaml
 
 from hvac_sim.building import Building, load_config
 from hvac_sim.model import FAULTS
+from hvac_sim.control import RemoteControl
 from hvac_sim.publisher import ConsolePublisher, MqttPublisher, ThingsBoardPublisher
 
 HERE = Path(__file__).resolve().parent
+CORRUPT_KINDS = ("spike", "missing", "text", "negative")
 
 
 class LiveSimulator:
@@ -47,6 +53,8 @@ class LiveSimulator:
         self.scheduled: list[tuple[datetime, str]] = []   # (sim time, command)
         self.lock = threading.Lock()
         self.running = True
+        self.last: dict[str, dict] = {}                  # last reading per device (for 'corrupt')
+        self.on_step = None                              # called after each published step
         print(f"Warming up the building model (24 simulated hours before {start:%H:%M})...")
         self.building.warm_up(start)
 
@@ -90,6 +98,8 @@ class LiveSimulator:
                     faults = {d: a.fault.name for d, a in self.building.ahus.items() if a.fault}
                     return (f"clock {self.now:%Y-%m-%d %H:%M} | faults {faults or 'none'} | "
                             f"offline {sorted(self.offline) or 'none'} | {self.seconds_per_step}s/reading")
+                if cmd == "corrupt":
+                    return self._corrupt(args[0], args[1] if len(args) > 1 else "spike")
                 if cmd == "run":
                     return self._load_scenario(args[0])
                 if cmd == "help":
@@ -101,10 +111,46 @@ class LiveSimulator:
             except (KeyError, ValueError, IndexError, FileNotFoundError) as e:
                 return f"error: {e}"
 
+    def _corrupt(self, device: str, kind: str) -> str:
+        dev = self.building.get(device).params.device_id
+        if kind not in CORRUPT_KINDS:
+            return f"error: kind must be one of {', '.join(CORRUPT_KINDS)}"
+        r = dict(self.last.get(dev) or {"device_id": dev, "ts": f"{self.now:%Y-%m-%dT%H:%M:%SZ}"})
+        if kind == "spike":
+            r["zone_temp_c"] = 999.0                      # a sensor glitch no real room can reach
+        elif kind == "missing":
+            r.pop("airflow_cfm", None)
+        elif kind == "negative":
+            r["power_kw"] = -round(random.uniform(1, 5), 2)
+        payload = "#@! not json" if kind == "text" else json.dumps(r)
+        for p in self.publishers:
+            p.publish_raw(dev, payload)
+        return f"[{self.now:%H:%M}] sent one broken reading ({kind}) for {dev}"
+
+    def scenario_names(self) -> list[str]:
+        return sorted(p.stem for p in (HERE / "scenarios").glob("*.yaml"))
+
+    def status_dict(self) -> dict:
+        return {
+            "running": self.running,
+            "clock": f"{self.now:%Y-%m-%dT%H:%M:%SZ}",
+            "seconds_per_reading": self.seconds_per_step,
+            "devices": sorted(self.building.ahus),
+            "faults": [{"device_id": d, "fault": a.fault.name, "since": f"{a.fault.start:%Y-%m-%dT%H:%M:%SZ}"}
+                       for d, a in sorted(self.building.ahus.items()) if a.fault],
+            "offline": sorted(self.offline),
+            "fault_types": list(FAULTS),
+            "corrupt_kinds": list(CORRUPT_KINDS),
+            "scenarios": self.scenario_names(),
+            "pending_scenario_steps": len(self.scheduled),
+        }
+
     def _load_scenario(self, path: str) -> str:
         p = Path(path)
         if not p.is_absolute() and not p.exists():
             p = HERE / path
+        if not p.exists() and not p.suffix:
+            p = HERE / "scenarios" / f"{path}.yaml"     # 'run demo_filter' works too
         with open(p, encoding="utf-8") as f:
             scenario = yaml.safe_load(f)
         for step in scenario["steps"]:
@@ -128,8 +174,14 @@ class LiveSimulator:
             for r in readings:
                 if r["device_id"] in self.offline:
                     continue
+                self.last[r["device_id"]] = r
                 for p in self.publishers:
                     p.publish(r)
+            if self.on_step:
+                try:
+                    self.on_step()
+                except Exception as e:  # never stop the building because of the dashboard link
+                    print("status publish failed:", e)
             time.sleep(max(0.0, self.seconds_per_step - (time.monotonic() - t0)))
         for p in self.publishers:
             p.close()
@@ -171,6 +223,14 @@ def main() -> None:
     sim = LiveSimulator(cfg, publishers, start,
                         args.speed or live.get("seconds_per_step", 5),
                         live.get("minutes_per_step", 1))
+    remote = None
+    if not args.console:
+        try:
+            remote = RemoteControl(sim, host, cfg["mqtt"]["port"])
+            sim.on_step = remote.publish_status
+            print("Dashboard control enabled (MQTT topic hvac/sim/control)")
+        except (OSError, RuntimeError) as e:
+            print(f"Dashboard control not available ({e}); terminal commands still work")
     if args.scenario:
         print(sim.handle(f"run {args.scenario}"))
 
@@ -189,6 +249,8 @@ def main() -> None:
     except KeyboardInterrupt:
         sim.running = False
     time.sleep(0.2)
+    if remote:
+        remote.close()
 
 
 if __name__ == "__main__":

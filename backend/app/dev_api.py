@@ -25,6 +25,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .config import env
 from .detection.triage import TriageWorker
+from .ingestion.sim_control import SimCommand, SimControl, SimNotRunning
 from .ingestion.subscriber import Ingestion
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -122,7 +123,9 @@ def on_triage(e: dict, report: dict) -> None:
     traces[inc_id] = traces.get(inc_id, []) + report["steps"]
     inc["triage"] = {k: v for k, v in report.items() if k != "steps"}
     inc["llm_provider"] = report["provider"]
-    if report["verdict"] == "false_alarm":
+    if "device_offline" in e.get("rule_hits", []):
+        inc["title"] = f"{e['device_id']} stopped reporting"
+    elif report["verdict"] == "false_alarm":
         inc["title"] = f"Possible false alarm on {e['device_id']}"
     elif report["suspected_area"] in TITLE:
         inc["title"] = f"{TITLE[report['suspected_area']]} on {e['device_id']}"
@@ -140,7 +143,9 @@ def on_triage(e: dict, report: dict) -> None:
     hub.publish("agent_step", step)
 
 
-ingestion = Ingestion(on_event=on_event, on_reading=lambda r: hub.publish("telemetry", r))
+ingestion = Ingestion(on_event=on_event, on_reading=lambda r: hub.publish("telemetry", r),
+                      on_reject=lambda r: hub.publish("rejected", r))
+simulator = SimControl(on_status=lambda s: hub.publish("simulation", s))
 triage = TriageWorker(on_done=on_triage, store=ingestion.store, pipeline=ingestion.pipeline,
                       provider_fn=lambda: settings["provider"])
 
@@ -149,7 +154,9 @@ triage = TriageWorker(on_done=on_triage, store=ingestion.store, pipeline=ingesti
 async def lifespan(_: FastAPI):
     hub.loop = asyncio.get_running_loop()
     ingestion.start()
+    simulator.start()
     yield
+    simulator.stop()
     ingestion.stop()
 
 
@@ -159,7 +166,34 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 
 @app.get("/health")
 def health():
-    return {"ok": True, "readings": ingestion.readings}
+    return {"ok": True, "readings": ingestion.readings, "rejected": ingestion.rejected.count,
+            "simulator_connected": simulator.status()["connected"]}
+
+
+@app.get("/simulation")
+def simulation_status():
+    """Simulator clock, speed, active faults and offline units (for the Simulator page)."""
+    return simulator.status()
+
+
+@app.post("/simulation/command")
+def simulation_command(cmd: SimCommand):
+    """Validated command to the simulator. Bad input -> 422 before anything is sent."""
+    try:
+        out = simulator.send(cmd)
+    except SimNotRunning as e:
+        raise HTTPException(503, str(e))
+    except TimeoutError as e:
+        raise HTTPException(504, str(e))
+    if not out["ok"]:
+        raise HTTPException(400, out["message"])
+    return out
+
+
+@app.get("/ingestion/rejected")
+def rejected_readings():
+    """Readings that failed input validation, newest first, with the reason."""
+    return ingestion.rejected.summary()
 
 
 @app.get("/devices")
