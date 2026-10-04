@@ -17,6 +17,7 @@ from .monitoring import MonitoringConfig, _hhmm
 
 TREND_KEYS = ["zone_temp_c", "supply_temp_c", "airflow_cfm", "fan_speed_pct", "power_kw",
               "humidity_pct", "co2_ppm", "occupancy"]
+BUILDING_WIDE_MAX_Z = 6.0   # a deviation this large on one unit is that unit's own fault
 STUCK_KEYS = ["zone_temp_c", "supply_temp_c", "humidity_pct", "airflow_cfm", "co2_ppm"]
 RANGES = {"zone_temp_c": (5, 45), "supply_temp_c": (2, 40), "humidity_pct": (0, 100),
           "airflow_cfm": (0, 5000), "power_kw": (0, 30), "co2_ppm": (300, 5000)}
@@ -159,15 +160,24 @@ class TriageTools:
         else:
             return {"checked": 0, "abnormal": [], "note": "Other units could not be checked."}
         bad = [p["device_id"] for p in peers if p.get("state") in ("warning", "critical")]
+        strongest = max((abs(s.get("z", 0)) for s in self.event.get("signals", [])), default=0.0)
+        # several units can have SEPARATE faults at the same time; a shared cause (weather)
+        # moves many units a little, it does not produce a huge deviation on one of them
+        possible = len(bad) >= 3 and strongest < BUILDING_WIDE_MAX_Z
         if not peers:
             note = "No other units are reporting."
-        elif len(bad) >= 3:
-            note = f"{len(bad)} of {len(peers)} other units are abnormal too ({', '.join(bad)}): likely building-wide."
+        elif possible:
+            note = (f"{len(bad)} of {len(peers)} other units are abnormal too ({', '.join(bad)}) and this unit's own "
+                    f"deviation is mild (max {strongest:.1f}σ): possibly a building-wide cause such as weather.")
         elif bad:
-            note = f"Only {', '.join(bad)} also looks unusual; the rest of the building is normal."
+            note = (f"{', '.join(bad)} also look{'s' if len(bad) == 1 else ''} unusual, but "
+                    + (f"this unit's own deviation is large ({strongest:.1f}σ), so it has its own fault"
+                       if len(bad) >= 3 else "the rest of the building is normal")
+                    + ". Not building-wide: units can have separate faults at the same time.")
         else:
             note = f"All {len(peers)} other units look normal, so the problem is specific to {me}."
-        return {"checked": len(peers), "abnormal": bad, "note": note}
+        return {"checked": len(peers), "abnormal": bad, "building_wide_possible": possible,
+                "max_abs_z_this_unit": round(strongest, 1), "note": note}
 
     def schedule_context(self) -> dict:
         ts = self.event["ts_detected"]
