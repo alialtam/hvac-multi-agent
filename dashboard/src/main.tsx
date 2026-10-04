@@ -10,6 +10,7 @@ import Incidents from "./pages/Incidents";
 import Activity from "./pages/Activity";
 import Tickets from "./pages/Tickets";
 import Energy from "./pages/Energy";
+import Simulator from "./pages/Simulator";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
@@ -24,6 +25,7 @@ createRoot(document.getElementById("root")!).render(
             <Route path="activity" element={<Activity />} />
             <Route path="tickets" element={<Tickets />} />
             <Route path="energy" element={<Energy />} />
+            <Route path="simulator" element={<Simulator />} />
             <Route path="*" element={<p className="text-ink-2">This page does not exist. <Link className="text-chill underline" to="/">Go to the building overview</Link>.</p>} />
           </Route>
         </Routes>

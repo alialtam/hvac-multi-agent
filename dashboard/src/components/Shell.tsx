@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from "react-router-dom";
-import { Activity, Gauge, LayoutGrid, ReceiptText, Siren, Zap } from "lucide-react";
+import { Activity, FlaskConical, Gauge, LayoutGrid, ReceiptText, Siren, Zap } from "lucide-react";
 import { useState } from "react";
 import { api } from "../lib/api";
 import { PROVIDER_LABEL, time } from "../lib/format";
@@ -12,6 +12,7 @@ const NAV = [
   { to: "/activity", label: "Agent activity", icon: Activity },
   { to: "/tickets", label: "Tickets", icon: ReceiptText },
   { to: "/energy", label: "Energy", icon: Zap },
+  { to: "/simulator", label: "Simulator", icon: FlaskConical },
 ];
 
 export default function Shell() {

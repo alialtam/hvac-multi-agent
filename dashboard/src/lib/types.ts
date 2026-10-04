@@ -127,3 +127,37 @@ export interface LlmSettings {
 }
 
 export interface Telemetry { device_id: string; minutes: number; readings: Reading[] }
+
+export interface SimFault { device_id: string; fault: string; since: string }
+
+export interface SimStatus {
+  connected: boolean;
+  running?: boolean;
+  clock?: string;
+  seconds_per_reading?: number;
+  devices?: string[];
+  faults?: SimFault[];
+  offline?: string[];
+  fault_types?: string[];
+  corrupt_kinds?: string[];
+  scenarios?: string[];
+  pending_scenario_steps?: number;
+}
+
+export type SimAction = "inject" | "reset" | "offline" | "online" | "jump" | "speed" | "corrupt" | "scenario";
+
+export interface SimCommand {
+  action: SimAction;
+  device_id?: string;
+  fault?: string;
+  ramp_min?: number;
+  time?: string;
+  seconds_per_reading?: number;
+  kind?: string;
+  scenario?: string;
+}
+
+export interface SimResult { command: string; ok: boolean; message: string; status: SimStatus }
+
+export interface RejectedReading { received_at: string; device_id: string | null; ts: string | null; building_time?: string | null; reason: string }
+export interface RejectedSummary { count: number; recent: RejectedReading[] }
