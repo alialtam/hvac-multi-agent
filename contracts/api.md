@@ -11,6 +11,9 @@ Example responses live in `api_examples/<file>.json` (file name in the table).
 | GET | `/incidents` | `incidents.json` | Newest first. `state`: `investigating` \| `awaiting_approval` \| `approved` \| `rejected` \| `resolved` |
 | GET | `/incidents/{id}` | `incident_detail.json` | Full incident incl. triage, diagnosis, energy, recommendation, agent trace |
 | GET | `/incidents/{id}/trace` | (list of trace lines) | Full execution trace: every LLM call, tool call and decision, format in `backend/app/agents/README.md` |
+| GET | `/simulation` | `simulation.json` | Simulator clock, speed, active faults, offline units. `connected: false` when the simulator is not running |
+| POST | `/simulation/command` | `simulation_command.json` | Body: `{"action": "inject"\|"reset"\|"offline"\|"online"\|"jump"\|"speed"\|"corrupt"\|"scenario", ...}`. Validated: bad input -> 422, simulator not running -> 503, simulator refused -> 400 |
+| GET | `/ingestion/rejected` | `rejected_readings.json` | Readings that failed input validation, newest first, with the reason |
 | POST | `/incidents/{id}/approve` | `incident_approve.json` | Body: `{"operator": "name", "note": "optional"}`. Returns the updated incident + ticket id |
 | POST | `/incidents/{id}/reject` | `incident_reject.json` | Body: `{"operator": "name", "reason": "required"}` |
 | GET | `/tickets` | `tickets.json` | Newest first |

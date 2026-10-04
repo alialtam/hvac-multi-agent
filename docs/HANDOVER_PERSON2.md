@@ -127,3 +127,17 @@ in batch (as above), feed every event to your Diagnosis agent with each provider
 (`openai`, `ollama`, `rules`), and compare the predicted cause with the `fault` column of
 the log for the same device and time. `evaluation/metrics.py` (`event_metrics`) matches
 events to faults; reuse it so both halves of the report use the same rules.
+
+## 8. Simulator control and input validation (copy into the real API)
+
+Abdulelah: the real API needs three more endpoints the dashboard uses. Copy them from
+`backend/app/dev_api.py` as they are (about 30 lines):
+
+| Endpoint | What |
+| --- | --- |
+| `GET /simulation` | simulator status (`SimControl.status()`) |
+| `POST /simulation/command` | validated command (`SimCommand` model): 422 bad input, 503 simulator not running, 400 refused |
+| `GET /ingestion/rejected` | readings that failed validation (`ingestion.rejected.summary()`) |
+
+Create `SimControl(on_status=...)` next to `Ingestion(...)` and start/stop both in the lifespan.
+Pass `on_reject=` to `Ingestion` if you want rejected readings pushed over the WebSocket.

@@ -59,4 +59,5 @@ def test_empty_database_url_uses_default(monkeypatch):
     from app.ingestion.db import DEFAULT_URL
     for value in ("", "   ", "# empty = SQLite file data/hvac.db"):
         monkeypatch.setenv("DATABASE_URL", value)
-        assert str(get_engine().url) == DEFAULT_URL
+        # compare the file path, not the URL text: on Windows the URL text escapes "C:" as "C%3A"
+        assert get_engine().url.database == DEFAULT_URL.removeprefix("sqlite:///")

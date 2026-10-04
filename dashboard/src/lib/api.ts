@@ -1,8 +1,10 @@
 // API client. With VITE_API_URL set it talks to the FastAPI backend (Person 2);
 // without it, or with ?demo in the URL, it serves the example responses from
 // ../contracts/api_examples so the dashboard can be built and shown on its own.
+import { time } from "./format";
 import type {
-  AgentStep, Device, EnergySummary, IncidentDetail, IncidentSummary, LlmSettings, Provider, Telemetry, Ticket,
+  AgentStep, Device, EnergySummary, IncidentDetail, IncidentSummary, LlmSettings, Provider, RejectedSummary,
+  SimCommand, SimResult, SimStatus, Telemetry, Ticket,
 } from "./types";
 
 import devicesEx from "@contracts/api_examples/devices.json";
@@ -13,6 +15,8 @@ import ticketsEx from "@contracts/api_examples/tickets.json";
 import activityEx from "@contracts/api_examples/agents_activity.json";
 import energyEx from "@contracts/api_examples/energy_summary.json";
 import settingsEx from "@contracts/api_examples/settings_llm.json";
+import simulationEx from "@contracts/api_examples/simulation.json";
+import rejectedEx from "@contracts/api_examples/rejected_readings.json";
 
 const params = new URLSearchParams(window.location.search);
 export const API_URL: string = (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "");
@@ -32,9 +36,19 @@ async function http<T>(path: string, init?: RequestInit): Promise<T> {
   }
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    throw new ApiError(`${init?.method ?? "GET"} ${path} failed (${res.status}). ${text.slice(0, 200)}`);
+    throw new ApiError(errorText(text) ?? `${init?.method ?? "GET"} ${path} failed (${res.status}). ${text.slice(0, 200)}`);
   }
   return res.json() as Promise<T>;
+}
+
+/** FastAPI errors: {"detail": "text"} or {"detail": [{"msg": "..."}]}. Show the human part. */
+function errorText(body: string): string | null {
+  try {
+    const d = JSON.parse(body).detail;
+    if (typeof d === "string") return d.replace(/^error: /, "");
+    if (Array.isArray(d) && d[0]?.msg) return d.map((x: { msg: string }) => x.msg.replace(/^Value error, /, "")).join("; ");
+  } catch { /* not JSON */ }
+  return null;
 }
 
 // ------------------------------------------------------------- demo data
@@ -48,8 +62,51 @@ const demo = {
   tickets: clone(ticketsEx) as Ticket[],
   activity: clone(activityEx) as AgentStep[],
   settings: clone(settingsEx) as LlmSettings,
+  sim: clone(simulationEx) as SimStatus,
+  rejected: clone(rejectedEx) as RejectedSummary,
   tick: 0,
 };
+
+const CORRUPT_REASON: Record<string, string> = {
+  spike: "zone_temp_c = 999.0 is outside the possible range -10 to 60",
+  missing: "missing airflow_cfm",
+  text: "message is not valid JSON",
+  negative: "power_kw = -3.2 is outside the possible range 0 to 100",
+};
+
+/** Demo mode: apply a command to the in-memory simulator so the page can be rehearsed offline. */
+function demoSim(c: SimCommand): SimResult {
+  const s = demo.sim;
+  const hhmm = time(s.clock);
+  let message = "";
+  if (c.action === "inject") {
+    s.faults = [...(s.faults ?? []).filter((f) => f.device_id !== c.device_id),
+      { device_id: c.device_id!, fault: c.fault!, since: s.clock! }];
+    message = `[${hhmm}] injected ${c.fault} on ${c.device_id}`;
+  } else if (c.action === "reset") {
+    s.faults = !c.device_id || c.device_id === "all" ? [] : (s.faults ?? []).filter((f) => f.device_id !== c.device_id);
+    message = `[${hhmm}] reset ${!c.device_id || c.device_id === "all" ? "all devices" : c.device_id}`;
+  } else if (c.action === "offline" || c.action === "online") {
+    const off = new Set(s.offline);
+    if (c.action === "offline") off.add(c.device_id!); else off.delete(c.device_id!);
+    s.offline = [...off].sort();
+    message = `[${hhmm}] ${c.device_id} is now ${c.action}`;
+  } else if (c.action === "jump") {
+    s.clock = `${s.clock!.slice(0, 11)}${c.time}:00Z`;
+    message = `clock is now ${s.clock.slice(0, 10)} ${c.time}`;
+  } else if (c.action === "speed") {
+    s.seconds_per_reading = c.seconds_per_reading;
+    message = `one reading every ${c.seconds_per_reading} s`;
+  } else if (c.action === "corrupt") {
+    demo.rejected.count++;
+    demo.rejected.recent.unshift({ received_at: new Date().toISOString().slice(0, 19) + "Z", device_id: c.device_id!,
+      ts: c.kind === "text" ? null : s.clock!, building_time: s.clock!, reason: CORRUPT_REASON[c.kind ?? "spike"] });
+    message = `[${hhmm}] sent one broken reading (${c.kind ?? "spike"}) for ${c.device_id}`;
+  } else {
+    message = `scenario '${c.scenario}' loaded`;
+  }
+  return { command: c.action, ok: true, message, status: clone(s) };
+}
 
 function demoDetail(id: string): IncidentDetail {
   if (demo.detail[id]) return demo.detail[id];
@@ -165,6 +222,18 @@ export const api = {
   async settings(): Promise<LlmSettings> {
     if (DEMO) return (await wait(), clone(demo.settings));
     return http("/settings/llm");
+  },
+  async simulation(): Promise<SimStatus> {
+    if (DEMO) return (await wait(), clone(demo.sim));
+    return http("/simulation");
+  },
+  async simCommand(cmd: SimCommand): Promise<SimResult> {
+    if (DEMO) return (await wait(250), demoSim(cmd));
+    return http("/simulation/command", { method: "POST", body: JSON.stringify(cmd) });
+  },
+  async rejected(): Promise<RejectedSummary> {
+    if (DEMO) return (await wait(), clone(demo.rejected));
+    return http("/ingestion/rejected");
   },
   async setProvider(provider: Provider): Promise<LlmSettings> {
     if (DEMO) {

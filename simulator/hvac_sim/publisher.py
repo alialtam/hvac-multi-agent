@@ -32,6 +32,10 @@ class MqttPublisher:
         topic = self.topic.format(device_id=reading["device_id"])
         self.client.publish(topic, json.dumps(reading), qos=self.qos)
 
+    def publish_raw(self, device_id: str, payload: str) -> None:
+        """Send any text on a device's topic (used to test input validation)."""
+        self.client.publish(self.topic.format(device_id=device_id), payload, qos=self.qos)
+
     def close(self) -> None:
         self.client.loop_stop()
         self.client.disconnect()
@@ -60,6 +64,9 @@ class ThingsBoardPublisher:
         values = {k: v for k, v in reading.items() if k not in self.FIELDS_TO_SKIP}
         c.publish("v1/devices/me/telemetry", json.dumps(values))
 
+    def publish_raw(self, device_id: str, payload: str) -> None:
+        pass   # never send test garbage to ThingsBoard
+
     def close(self) -> None:
         for c in self.clients.values():
             c.loop_stop()
@@ -80,6 +87,9 @@ class ConsolePublisher:
             f"kW={r['power_kw']:5.2f} occ={r['occupancy']:2d} CO2={r['co2_ppm']:5.0f} "
             f"[{r['fault_label']}]\n"
         )
+
+    def publish_raw(self, device_id: str, payload: str) -> None:
+        sys.stdout.write(f"BROKEN READING {device_id}: {payload}\n")
 
     def close(self) -> None:
         pass

@@ -1,0 +1,11 @@
+{
+  "_request": {
+    "action": "inject",
+    "device_id": "AHU-4",
+    "fault": "filter_blockage"
+  },
+  "command": "inject AHU-4 filter_blockage",
+  "ok": true,
+  "message": "[14:30] injected filter_blockage on AHU-4",
+  "status": "(same shape as simulation.json)"
+}
