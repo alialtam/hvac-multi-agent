@@ -1,0 +1,19 @@
+{
+  "count": 2,
+  "recent": [
+    {
+      "received_at": "2026-10-05T09:02:11Z",
+      "device_id": "AHU-3",
+      "ts": "2026-10-05T14:31:00Z",
+      "building_time": "2026-10-05T14:31:00Z",
+      "reason": "zone_temp_c = 999.0 is outside the possible range -10 to 60"
+    },
+    {
+      "received_at": "2026-10-05T09:01:40Z",
+      "device_id": "AHU-3",
+      "ts": null,
+      "building_time": "2026-10-05T14:30:00Z",
+      "reason": "message is not valid JSON"
+    }
+  ]
+}

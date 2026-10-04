@@ -3,7 +3,8 @@
     from app.ingestion.subscriber import Ingestion
 
     ingestion = Ingestion(on_event=supervisor.handle,        # anomaly events (contract format)
-                          on_reading=websocket_broadcast)    # optional: every reading, for /ws/live
+                          on_reading=websocket_broadcast,    # optional: every reading, for /ws/live
+                          on_reject=notify)                  # optional: readings that failed validation
     ingestion.start()      # in FastAPI's startup / lifespan
     ...
     ingestion.stop()       # on shutdown
@@ -11,6 +12,7 @@
     ingestion.store.latest_readings()          # for GET /devices
     ingestion.store.get_telemetry("AHU-4", 60) # for GET /devices/{id}/telemetry
     ingestion.pipeline.health("AHU-4")         # 'ok' | 'warning' | 'critical' | 'offline'
+    ingestion.rejected.summary()               # readings that failed validation, with reasons
 
 Callbacks run on the MQTT thread. Keep them quick (put work on a queue) or the
 next readings wait. on_reading receives the reading WITHOUT fault_label.
@@ -26,6 +28,7 @@ from typing import Callable
 
 from ..detection.pipeline import DetectionPipeline
 from .db import TelemetryStore
+from .validation import RejectLog, validate_reading
 
 log = logging.getLogger("ingestion")
 
@@ -38,6 +41,7 @@ except ImportError:  # pragma: no cover
 class Ingestion:
     def __init__(self, on_event: Callable[[dict], None] | None = None,
                  on_reading: Callable[[dict], None] | None = None,
+                 on_reject: Callable[[dict], None] | None = None,
                  host: str | None = None, port: int | None = None,
                  topic: str = "hvac/+/telemetry", store: TelemetryStore | None = None,
                  pipeline: DetectionPipeline | None = None):
@@ -49,7 +53,10 @@ class Ingestion:
         self.on_reading = on_reading
         self.pipeline = pipeline or DetectionPipeline(sink=self._handle_event)
         self.pipeline.sink = self._handle_event
+        self.on_reject = on_reject
         self.readings = 0
+        self.rejected = RejectLog()
+        self.last_ts: str | None = None     # newest valid reading time (simulated building clock)
         self._stop = threading.Event()
         self._client = None
 
@@ -64,24 +71,37 @@ class Ingestion:
             except Exception:  # never let a downstream bug stop ingestion
                 log.exception("on_event callback failed")
 
-    def handle_message(self, payload: bytes | str) -> dict | None:
+    def handle_message(self, payload: bytes | str, topic: str | None = None) -> dict | None:
         """Process one raw MQTT payload. Public so it can be tested without a broker."""
         try:
             reading = json.loads(payload)
-        except (ValueError, TypeError):
-            log.warning("ignoring non-JSON message")
-            return None
-        if not isinstance(reading, dict) or "device_id" not in reading or "ts" not in reading:
-            log.warning("ignoring message without device_id/ts")
+        except (ValueError, TypeError, UnicodeDecodeError):
+            reading, reason = None, "message is not valid JSON"
+        else:
+            reason = validate_reading(reading)
+        if reason:
+            self._reject(reason, reading, topic)
             return None
         self.store.add_reading(reading)
         self.readings += 1
+        self.last_ts = max(self.last_ts or "", reading["ts"])
         if self.on_reading:
             try:
                 self.on_reading({k: v for k, v in reading.items() if k != "fault_label"})
             except Exception:
                 log.exception("on_reading callback failed")
         return self.pipeline.process(reading)
+
+    def _reject(self, reason: str, reading, topic: str | None = None) -> None:
+        # topic is hvac/<device>/telemetry: tells us the sender even when the message is garbage
+        parts = (topic or "").split("/")
+        entry = self.rejected.add(reason, reading, parts[1] if len(parts) == 3 else None, self.last_ts)
+        log.warning("REJECTED reading from %s: %s", entry["device_id"] or "unknown", reason)
+        if self.on_reject:
+            try:
+                self.on_reject(entry)
+            except Exception:
+                log.exception("on_reject callback failed")
 
     # ------------------------------------------------------------------ mqtt
     def start(self) -> None:
@@ -100,7 +120,7 @@ class Ingestion:
 
         def on_message(client, userdata, msg):
             try:
-                self.handle_message(msg.payload)
+                self.handle_message(msg.payload, msg.topic)
             except Exception:
                 log.exception("failed to process message on %s", msg.topic)
 
