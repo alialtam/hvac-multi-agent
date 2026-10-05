@@ -125,10 +125,26 @@ def test_last_round_forces_a_decision():
     assert llm.sent[-1]["tool_choice"]["function"]["name"] == "submit_triage"
 
 
-def test_building_wide_when_many_units_abnormal():
-    peers = lambda e: [{"device_id": d, "state": "warning"} for d in ("AHU-1", "AHU-2", "AHU-3")]  # noqa: E731
-    r = triage_event(load("AHU-4"), provider="rules", peers=peers)
+PEERS3 = lambda e: [{"device_id": d, "state": "warning"} for d in ("AHU-1", "AHU-2", "AHU-3")]  # noqa: E731
+
+
+def test_building_wide_only_when_this_unit_deviates_mildly():
+    mild = load("AHU-4")
+    mild = {**mild, "signals": [{**s, "z": max(-3.5, min(3.5, s["z"]))} for s in mild["signals"]]}
+    r = triage_event(mild, provider="rules", peers=PEERS3)
     assert r["verdict"] == "building_wide" and r["severity"] == "LOW"
+
+
+def test_overlapping_faults_are_not_dismissed_as_building_wide():
+    # seen in evaluation: other units had their OWN faults; AHU-4's -6σ airflow is a fault of its own
+    r = triage_event(load("AHU-4"), provider="rules", peers=PEERS3)
+    assert r["verdict"] == "equipment_fault" and r["suspected_area"] == "airflow"
+    assert "separate faults" in TriageTools(load("AHU-4"), peers=PEERS3).run("other_units")["note"]
+
+
+def test_brief_tells_the_llm_about_the_schedule():
+    from app.detection.triage import _event_brief
+    assert "OUTSIDE the 07:00-18:30" in _event_brief(load("AHU-2"), TriageTools(load("AHU-2")))
 
 
 def test_tools_are_safe():

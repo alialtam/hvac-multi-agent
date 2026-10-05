@@ -2,6 +2,7 @@
 
     python evaluation/evaluate_triage.py                       # rules triage, validation set
     python evaluation/evaluate_triage.py --split test          # final numbers (run once)
+    python evaluation/evaluate_triage.py --split holdout       # after changing the triage: fresh unseen data
     python evaluation/evaluate_triage.py --provider openai --limit 25   # LLM (needs OPENAI_API_KEY)
 
 Every event the full detector raises is triaged. Ground truth comes from the
@@ -27,7 +28,8 @@ from app.detection.triage import triage_event  # noqa: E402
 
 DATA, OUT = ROOT / "data", ROOT / "evaluation" / "results"
 MODEL = DATA / "models" / "detector.joblib"
-SPLITS = {"val": ("val_faults.csv.gz", "val_fault_log.csv"), "test": ("test_faults.csv.gz", "fault_log.csv")}
+SPLITS = {"val": ("val_faults.csv.gz", "val_fault_log.csv"), "test": ("test_faults.csv.gz", "fault_log.csv"),
+          "holdout": ("holdout_faults.csv.gz", "holdout_fault_log.csv")}   # holdout: simulator/generate_dataset.py --holdout
 AREA = {"filter_blockage": "airflow", "compressor_failure": "cooling", "refrigerant_leak": "cooling",
         "sensor_stuck": "sensor", "after_hours_waste": "schedule"}
 DISMISS = {"false_alarm", "building_wide"}

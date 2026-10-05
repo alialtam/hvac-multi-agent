@@ -97,10 +97,22 @@ Verdicts:
 - false_alarm: the evidence does not hold up (small deviations, nothing sustained)
 - unclear: real but you cannot tell which kind
 
-Useful physics: restricted airflow shows as less airflow at the same fan speed, often with higher
-power and colder supply air. Lost cooling shows as warmer supply air, a smaller coil temperature
-drop and a warming room. A frozen sensor shows identical readings while other signals move. The rule device_offline means
-the unit sent no data at all (network, controller or power): verdict sensor_fault, area sensor, maintenance.
+HVAC knowledge (apply in this order):
+1. Outside the schedule with the unit ON and an empty zone: operational_waste, area schedule. Airflow
+   and power look extreme then only because the normal value at night is 0; it is NOT an airflow fault.
+2. A frozen, impossible or missing reading: sensor_fault, area sensor. The rule device_offline means
+   the unit sent no data at all (network, controller or power): sensor_fault, area sensor, maintenance.
+3. Less airflow at the same fan speed (airflow z clearly negative), often with colder supply air:
+   equipment_fault, area airflow.
+4. Warmer supply air, a smaller coil temperature drop, a warming room, or power collapsing:
+   equipment_fault, area cooling.
+5. Power clearly HIGHER (z >= 3) while airflow and room temperature are still normal: the compressor
+   works harder for the same cooling, an early loss of cooling capacity (e.g. a slow refrigerant
+   leak): equipment_fault, area cooling. Do not answer unknown for this pattern.
+6. building_wide ONLY when other_units says a building-wide cause is possible (3+ other units
+   abnormal AND this unit's deviation is mild). Units often have separate faults at the same time;
+   other units being abnormal never explains a large deviation on this unit.
+Use area unknown only when none of these patterns fits.
 
 recommend_next: diagnosis for equipment faults, energy for operational waste, maintenance for
 sensor faults, human_review for building_wide, false_alarm or anything you are unsure about.
@@ -117,10 +129,15 @@ def _step(type_: str, to: str, content: dict, provider: str, duration_ms: int = 
             "content": content, "llm_provider": provider, "duration_ms": duration_ms}
 
 
-def _event_brief(event: dict) -> str:
+def _event_brief(event: dict, tools: TriageTools) -> str:
     keep = {k: event.get(k) for k in ("event_id", "device_id", "zone", "ts_start", "ts_detected",
                                        "method", "score", "severity", "rule_hits", "signals")}
-    return "New anomaly event (window of raw readings available through the tools):\n" + json.dumps(keep)
+    cfg = tools.config
+    t = event["ts_detected"][11:16]
+    inside = cfg.schedule_on <= t < cfg.schedule_off
+    return (f"New anomaly event, detected at {t} building time ({'inside' if inside else 'OUTSIDE'} the "
+            f"{cfg.schedule_on}-{cfg.schedule_off} operating schedule). The window of raw readings is "
+            "available through the tools.\n" + json.dumps(keep))
 
 
 # ------------------------------------------------------------------- rules
@@ -147,7 +164,7 @@ def rules_triage(event: dict, tools: TriageTools) -> tuple[dict, list[dict]]:
     elif health.get("frozen") or health.get("out_of_range") or "sensor_flatline" in rules:
         d = dict(verdict="sensor_fault", suspected_area="sensor", recommend_next="maintenance", confidence=0.8)
         ev = [health["note"]] + ev
-    elif len(others.get("abnormal", [])) >= 3:
+    elif others.get("building_wide_possible") and not rules & {"zone_too_warm", "fast_temp_rise"}:
         d = dict(verdict="building_wide", suspected_area="building", recommend_next="human_review",
                  confidence=0.6)
         sev = "LOW"
@@ -202,7 +219,7 @@ def _summary(event: dict, d: dict) -> str:
 def llm_triage(event: dict, tools: TriageTools, client: ChatClient) -> tuple[dict, list[dict]]:
     """LLM decides which tools to call, then submits. Raises on failure (caller falls back)."""
     provider = client.provider
-    messages = [{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": _event_brief(event)}]
+    messages = [{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": _event_brief(event, tools)}]
     steps: list[dict] = []
     fixes = repeats = 0
     done: set[str] = set()

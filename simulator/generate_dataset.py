@@ -7,6 +7,8 @@ Outputs (in ../data/):
     test_faults.csv.gz    12 days: 10 days with 5 injections each + 2 normal days (final results)
     fault_log.csv         ground truth: one row per injection (device, fault, start, end)
     sample_day.csv        1 small day with all 5 faults (quick tests for Person 2)
+    holdout_faults.csv.gz + holdout_fault_log.csv   (only with --holdout) a fresh set with a new seed,
+                          made AFTER a method was changed, to evaluate that change on unseen data
 
 Run:  python generate_dataset.py            (takes about 1 minute)
 """
@@ -78,10 +80,24 @@ def main() -> None:
     ap.add_argument("--seed", type=int, default=7)
     ap.add_argument("--test-seed", type=int, default=2027,
                     help="separate seed for the final test set (never used while tuning)")
+    ap.add_argument("--holdout", action="store_true",
+                    help="ONLY write a fresh holdout set (new seed, new dates); other files untouched")
+    ap.add_argument("--holdout-seed", type=int, default=2028)
     args = ap.parse_args()
 
     cfg = load_config()
     DATA.mkdir(exist_ok=True)
+    if args.holdout:
+        start = datetime(2026, 10, 10)
+        plan = plan_injections(cfg, start, args.fault_days, np.random.default_rng(args.holdout_seed))
+        days = args.fault_days + args.normal_test_days
+        print(f"Holdout set: {days} days, {len(plan)} fault injections, seed {args.holdout_seed}...")
+        simulate(cfg, start, days, plan, seed=args.holdout_seed).to_csv(DATA / "holdout_faults.csv.gz", index=False)
+        log = pd.DataFrame(plan)
+        for c in ("start", "end"):
+            log[c] = log[c].dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+        log.sort_values("start").to_csv(DATA / "holdout_fault_log.csv", index=False)
+        return
     rng = np.random.default_rng(args.seed)
 
     print(f"Training set: {args.train_days} normal days...")
