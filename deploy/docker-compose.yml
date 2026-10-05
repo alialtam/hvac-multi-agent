@@ -1,0 +1,49 @@
+# Whole system on one server:  docker compose --env-file deploy/.env -f deploy/docker-compose.yml up -d --build
+# Only Caddy (ports 80/443) is reachable from the internet.
+name: hvac
+
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2
+    volumes:
+      - ./mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+    restart: unless-stopped
+
+  backend:
+    build: { context: .., dockerfile: deploy/Dockerfile.app }
+    image: hvac-app
+    command: uvicorn app.dev_api:app --host 0.0.0.0 --port 8000 --proxy-headers
+    working_dir: /app/backend
+    env_file: .env
+    environment:
+      MQTT_HOST: mosquitto
+      DATABASE_URL: sqlite:////app/state/hvac.db
+    volumes:
+      - state:/app/state
+    depends_on: [mosquitto]
+    restart: unless-stopped
+
+  simulator:
+    image: hvac-app
+    command: python main.py --host mosquitto --start ${SIM_START:-09:00}
+    working_dir: /app/simulator
+    depends_on: [mosquitto, backend]
+    restart: unless-stopped
+
+  web:
+    build: { context: .., dockerfile: deploy/Dockerfile.web }
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:?set SITE_ADDRESS in deploy/.env}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on: [backend]
+    restart: unless-stopped
+
+volumes:
+  state:
+  caddy_data:
+  caddy_config:
