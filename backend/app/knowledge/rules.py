@@ -1,3 +1,4 @@
+#this is a simple rule-based diagnosis engine for HVAC systems. It analyzes the signals from an event and applies a set of rules to determine the most likely cause of an issue, along with a confidence level and supporting evidence.
 from app.agents.schemas import Diagnosis
 
 CAUSE_TEXT = {
