@@ -65,9 +65,9 @@ def critique_diagnosis(event: dict, diagnosis: Diagnosis) -> Critique:
     if cause == "compressor_failure" and power >= 2:
         issues.append(f"Power is above baseline (z={power}); a failed compressor draws less, not more.")
         suggested = "filter_blockage" if air <= -2 else None
-    elif cause == "refrigerant_leak" and power >= 3:
-        issues.append(f"Power rose sharply (z={power}); a refrigerant leak lowers or keeps power.")
-        suggested = "filter_blockage" if air <= -2 else None
+    elif cause == "refrigerant_leak" and power <= -3:
+        issues.append(f"Power fell sharply (z={power}); a refrigerant leak raises power, so a compressor failure is more likely.")
+        suggested = "compressor_failure"
     elif cause == "filter_blockage" and power <= -3:
         issues.append(f"Power fell sharply (z={power}); a blocked filter keeps or raises power, "
                       "so a cooling failure is more likely.")

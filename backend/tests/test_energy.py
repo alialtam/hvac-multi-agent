@@ -70,6 +70,16 @@ def test_critique_filter_but_power_collapsed():
     assert not c.agrees and c.suggested_cause == "compressor_failure"
 
 
+def test_critique_refrigerant_leak_high_power_is_accepted():
+    c = critique_diagnosis(ev({"power_kw": (7.0, 5.0, 6.0)}), diag("refrigerant_leak"))
+    assert c.agrees
+
+
+def test_critique_refrigerant_leak_but_power_collapsed():
+    c = critique_diagnosis(ev({"power_kw": (0.8, 5.6, -12.0)}), diag("refrigerant_leak"))
+    assert not c.agrees and c.suggested_cause == "compressor_failure"
+
+
 def test_critique_after_hours_but_occupied():
     e = ev({}, [{"status": "ON", "occupancy": 15, "fan_speed_pct": 100}])
     assert not critique_diagnosis(e, diag("after_hours_waste")).agrees
