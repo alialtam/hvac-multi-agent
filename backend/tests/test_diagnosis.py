@@ -80,3 +80,29 @@ def test_provider_failure_falls_back_to_rules_and_is_logged(monkeypatch):
     assert meta["provider"] == "rules" and "fake" in meta["fallbacks"]
     assert d.cause == "sensor_stuck"
     assert any(r.get("ok") is False and r.get("provider") == "fake" for r in records)
+
+
+from app.agents.diagnosis import get_peer_units
+
+
+def _peers(event):
+    return [{"device_id": f"AHU-{i}", "state": "critical"} for i in (2, 3, 4)] + \
+           [{"device_id": "AHU-5", "state": "normal"}]
+
+
+def test_get_peer_units_uses_a_peers_function():
+    out = get_peer_units(ev({"airflow_cfm": -2.5}), peers=_peers)
+    assert out["abnormal"] == ["AHU-2", "AHU-3", "AHU-4"] and out["building_wide_possible"] is True
+
+
+def test_peer_note_reaches_the_prompt(monkeypatch):
+    seen = {}
+
+    def fake(prompt, schema, agent, context=None):
+        seen["prompt"] = prompt
+        return Diagnosis(cause="unknown", cause_text="x", confidence=0.3,
+                         evidence=["e"], sources=["s"]), {"provider": "fake"}
+
+    monkeypatch.setattr(llm, "complete", fake)
+    diagnose(ev({"airflow_cfm": -2.5}), peers=_peers)
+    assert "AHU-2" in seen["prompt"]

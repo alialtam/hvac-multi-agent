@@ -21,8 +21,11 @@ def compare_with_baseline(event: dict) -> list[dict]:
             for s in event.get("signals", [])]
 
 
-def get_peer_units(peers: list[dict] | None = None) -> list[dict]:
-    return peers or []  # the API layer passes peer readings in; empty is fine
+def get_peer_units(event: dict, peers=None, store=None, pipeline=None) -> dict:
+    """Are the other units abnormal too? Live: pass store and pipeline. Tests and evaluation:
+    pass peers, a function event -> [{"device_id", "state"}]."""
+    from app.detection.triage_tools import TriageTools
+    return TriageTools(event, store=store, pipeline=pipeline, peers=peers).run("other_units")
 
 
 def get_incident_history(query: str, k: int = 3) -> list[dict]:
@@ -31,7 +34,7 @@ def get_incident_history(query: str, k: int = 3) -> list[dict]:
 
 # ---- agent ----
 def diagnose(event: dict, more_evidence: bool = False, critique: str | None = None,
-             peers: list[dict] | None = None):
+             peers=None, store=None, pipeline=None):
     """Return (Diagnosis, meta). more_evidence=True pulls a longer window and peer units."""
     event = strip_label(event)
     signals = compare_with_baseline(event)
@@ -46,7 +49,7 @@ Only use the evidence below. Do not invent measurements.
 Unit: {event.get('device_id')}  Rule hits: {event.get('rule_hits', [])}
 Signals vs baseline: {signals}
 Recent readings: {recent}
-Peer units: {get_peer_units(peers)}
+Peer units: {get_peer_units(event, peers, store, pipeline).get('note')}
 Knowledge notes: {[h['text'][:300] for h in kb]}
 Similar past incidents: {[h['text'][:200] for h in history]}
 {('Another agent disagrees: ' + critique) if critique else ''}
