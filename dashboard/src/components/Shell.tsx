@@ -1,7 +1,7 @@
 import { NavLink, Outlet } from "react-router-dom";
-import { Activity, FlaskConical, Gauge, LayoutGrid, ReceiptText, Siren, Zap } from "lucide-react";
+import { Activity, FlaskConical, Gauge, KeyRound, LayoutGrid, LockOpen, ReceiptText, Siren, Zap } from "lucide-react";
 import { useState } from "react";
-import { api } from "../lib/api";
+import { api, getDemoToken, setDemoToken } from "../lib/api";
 import { PROVIDER_LABEL, time } from "../lib/format";
 import { useLive, usePoll } from "../lib/live";
 import type { Provider } from "../lib/types";
@@ -71,7 +71,8 @@ export default function Shell() {
             </div>
           )}
           <ConnectionPill />
-          <div className="ml-auto">
+          <div className="ml-auto flex flex-wrap items-center gap-x-5 gap-y-2">
+            <UnlockControls />
             <ProviderSwitch />
           </div>
         </header>
@@ -145,5 +146,42 @@ function ProviderSwitch() {
       </div>
       {error && <span role="alert" className="text-[13px] text-alarm">{error}</span>}
     </div>
+  );
+}
+
+/** Public server only: write actions need the demo access key. Hidden on laptops. */
+function UnlockControls() {
+  const auth = usePoll(api.authCheck, 30000);
+  const [error, setError] = useState<string | null>(null);
+  if (!auth.data?.required) return null;
+
+  const unlock = async () => {
+    const key = window.prompt("Demo access key (from the project team):", "");
+    if (key === null) return;
+    setDemoToken(key.trim());
+    await auth.refresh();
+    const now = await api.authCheck().catch(() => null);
+    setError(now?.ok ? null : "That key is not right.");
+  };
+  const lock = async () => {
+    setDemoToken("");
+    setError(null);
+    await auth.refresh();
+  };
+
+  return auth.data.ok && getDemoToken() ? (
+    <button onClick={lock} title="Forget the key in this browser"
+      className="inline-flex items-center gap-1.5 text-[13px] text-chill hover:underline">
+      <LockOpen size={15} aria-hidden /> Controls unlocked
+    </button>
+  ) : (
+    <span className="inline-flex items-center gap-2">
+      <button onClick={unlock}
+        className="inline-flex items-center gap-1.5 rounded-md border border-line bg-panel px-2.5 py-1.5 text-[13.5px] font-semibold hover:bg-paper">
+        <KeyRound size={15} aria-hidden /> Unlock controls
+      </button>
+      {error ? <span role="alert" className="text-[13px] text-alarm">{error}</span>
+        : <span className="text-[12.5px] text-ink-3">View only</span>}
+    </span>
   );
 }

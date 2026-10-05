@@ -76,6 +76,11 @@ Four terminals, each with `venv\Scripts\activate`:
 For AI triage, copy `.env.example` to `.env` in the repo root and set `OPENAI_API_KEY` (without a key it uses rules).
 Once Person 2's backend exists, terminal 2 runs their app instead of `dev_api`.
 
+## Run it on a server (Azure, public HTTPS link)
+
+See [`deploy/README.md`](deploy/README.md): one Ubuntu VM, Docker, one setup command. Viewing is
+public; changing anything needs the demo access key.
+
 ## Run it on two laptops (the demo)
 
 Both laptops on the same phone hotspot. Find Laptop B's IP with `ipconfig` (e.g. `192.168.43.20`).
