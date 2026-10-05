@@ -1,0 +1,14 @@
+# Dashboard (built once) served by Caddy, which also gets the HTTPS certificate and
+# forwards /api/* (including the live WebSocket) to the backend.
+FROM node:22-slim AS build
+WORKDIR /repo
+COPY dashboard/package.json dashboard/package-lock.json dashboard/
+RUN cd dashboard && npm ci
+COPY contracts contracts
+COPY dashboard dashboard
+ENV VITE_API_URL=/api
+RUN cd dashboard && npm run build
+
+FROM caddy:2
+COPY deploy/Caddyfile /etc/caddy/Caddyfile
+COPY --from=build /repo/dashboard/dist /srv

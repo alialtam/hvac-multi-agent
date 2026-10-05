@@ -20,13 +20,14 @@ import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
 from .config import env
 from .detection.triage import TriageWorker
 from .ingestion.sim_control import SimCommand, SimControl, SimNotRunning
 from .ingestion.subscriber import Ingestion
+from .security import auth_status, demo_token_guard
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 ROOT = Path(__file__).resolve().parents[2]
@@ -161,7 +162,14 @@ async def lifespan(_: FastAPI):
 
 
 app = FastAPI(title="HVAC stand-in API (Person 1)", lifespan=lifespan)
+app.middleware("http")(demo_token_guard)     # write actions need the demo key when DEMO_TOKEN is set
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+
+
+@app.get("/auth/check")
+def auth_check(request: Request):
+    """Does this server need a demo key for write actions, and is the one sent valid?"""
+    return auth_status(request)
 
 
 @app.get("/health")

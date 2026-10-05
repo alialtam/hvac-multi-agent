@@ -19,20 +19,40 @@ import simulationEx from "@contracts/api_examples/simulation.json";
 import rejectedEx from "@contracts/api_examples/rejected_readings.json";
 
 const params = new URLSearchParams(window.location.search);
+// VITE_API_URL is a full URL on laptops (http://localhost:8000) or a path on the server
+// ("/api": the web server forwards it to the backend on the same address).
 export const API_URL: string = (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "");
 export const DEMO = !API_URL || params.has("demo");
 
-export class ApiError extends Error {}
+export class ApiError extends Error {
+  status?: number;
+  constructor(message: string, status?: number) { super(message); this.status = status; }
+}
+
+// Demo access key (public server only): sent with every request, kept in this browser.
+const TOKEN_KEY = "hvac-demo-token";
+export function getDemoToken(): string {
+  try { return localStorage.getItem(TOKEN_KEY) ?? ""; } catch { return ""; }
+}
+export function setDemoToken(token: string): void {
+  try {
+    if (token) localStorage.setItem(TOKEN_KEY, token); else localStorage.removeItem(TOKEN_KEY);
+  } catch { /* private window: the key just is not remembered */ }
+}
 
 async function http<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response;
+  const token = getDemoToken();
   try {
     res = await fetch(`${API_URL}${path}`, {
       ...init,
-      headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
+      headers: { "Content-Type": "application/json", ...(token ? { "X-Demo-Token": token } : {}), ...(init?.headers ?? {}) },
     });
   } catch {
     throw new ApiError(`Cannot reach the backend at ${API_URL}. Check that it is running and on the same network.`);
+  }
+  if (res.status === 401) {
+    throw new ApiError("This action needs the demo access key. Click \"Unlock controls\" at the top of the page.", 401);
   }
   if (!res.ok) {
     const text = await res.text().catch(() => "");
@@ -235,6 +255,10 @@ export const api = {
     if (DEMO) return (await wait(), clone(demo.rejected));
     return http("/ingestion/rejected");
   },
+  async authCheck(): Promise<{ required: boolean; ok: boolean }> {
+    if (DEMO) return { required: false, ok: true };
+    return http("/auth/check");
+  },
   async setProvider(provider: Provider): Promise<LlmSettings> {
     if (DEMO) {
       await wait(250);
@@ -247,5 +271,8 @@ export const api = {
 
 export function wsUrl(): string | null {
   if (DEMO) return null;
+  if (API_URL.startsWith("/")) {   // same server as the page (deployment behind the web server)
+    return `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}${API_URL}/ws/live`;
+  }
   return API_URL.replace(/^http/, "ws") + "/ws/live";
 }

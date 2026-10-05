@@ -136,3 +136,19 @@ def test_corrupt_command_and_status():
     st = sim.status_dict()
     assert st["faults"][0]["device_id"] == "AHU-4" and st["offline"] == ["AHU-6"]
     assert "demo_filter" in st["scenarios"] and st["clock"].startswith("2026-10-05T10:00")
+
+
+# ------------------------------------------------------------- demo access key
+def test_demo_key_protects_write_actions(monkeypatch):
+    from fastapi.testclient import TestClient
+    from app import dev_api
+    c = TestClient(dev_api.app)
+    monkeypatch.setenv("DEMO_TOKEN", "ahd-test")
+    assert c.get("/settings/llm").status_code == 200                                    # reading is open
+    assert c.post("/settings/llm", json={"provider": "rules"}).status_code == 401       # no key
+    assert c.post("/settings/llm", json={"provider": "rules"}, headers={"X-Demo-Token": "x"}).status_code == 401
+    assert c.post("/settings/llm", json={"provider": "rules"}, headers={"X-Demo-Token": "ahd-test"}).status_code == 200
+    assert c.get("/auth/check").json() == {"required": True, "ok": False}
+    monkeypatch.setenv("DEMO_TOKEN", "")                                                 # laptops: no key needed
+    assert c.post("/settings/llm", json={"provider": "openai"}).status_code == 200
+    assert c.get("/auth/check").json() == {"required": False, "ok": True}

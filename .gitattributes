@@ -1,0 +1,3 @@
+# shell scripts and server config must keep Unix line endings, even when edited on Windows
+*.sh text eol=lf
+deploy/* text eol=lf

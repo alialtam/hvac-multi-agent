@@ -1,0 +1,22 @@
+# SITE_ADDRESS = the server's DNS name (e.g. hvac-ahd.centralindia.cloudapp.azure.com).
+# Caddy gets and renews a free HTTPS certificate for it automatically.
+{$SITE_ADDRESS} {
+	encode gzip
+
+	# API and live WebSocket: /api/devices -> backend /devices, /api/ws/live -> /ws/live
+	handle_path /api/* {
+		reverse_proxy {$BACKEND_ADDR:backend:8000}
+	}
+
+	# the React dashboard (single-page app)
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+	}
+}
