@@ -1,0 +1,461 @@
+{
+  "scenario": "evidence_refused_real",
+  "behaviours": [
+    "Asking for more evidence"
+  ],
+  "setup": "Real sample event that the rules cannot diagnose with confidence, nothing scripted. Maintenance refuses, Diagnosis retries, the case goes to the operator.",
+  "provider": "rules",
+  "scripted_diagnosis_llm": false,
+  "sample_event_file": "evt_AHU-5_20260930T104600.json",
+  "event_id": "evt_AHU-5_20260930T104600",
+  "captured_at": "2026-10-06T17:00:34+00:00",
+  "code_commit": "add39d1",
+  "triage": {
+    "verdict": "equipment_fault",
+    "suspected_area": "cooling",
+    "severity": "MEDIUM",
+    "confidence": 0.6,
+    "summary": "AHU-5 shows a loss of cooling (power up 4σ).",
+    "key_evidence": [
+      "power 7.4 kW vs normal 5.5 kW (+4.0σ). No rule fired.",
+      "Over the last 30 min: power 6.7 kW → 7.4 kW; humidity 54.6 % → 56.0 %; supply air temperature 16.3 °C → 16.1 °C; airflow per % fan 30.1 → 30.2.",
+      "All 5 other units look normal, so the problem is specific to AHU-5."
+    ],
+    "recommend_next": "diagnosis",
+    "provider": "rules",
+    "rules_verdict": "equipment_fault",
+    "agrees_with_rules": true,
+    "tools_used": [
+      "signal_deviations",
+      "sensor_health",
+      "other_units",
+      "schedule_context",
+      "recent_trend"
+    ],
+    "tokens": 0,
+    "duration_ms": 0
+  },
+  "result": {
+    "state": "awaiting_approval",
+    "diagnosis": "unknown",
+    "confidence": 0.3,
+    "revisions": 0,
+    "replans": 0,
+    "escalated": true,
+    "has_recommendation": false
+  },
+  "checks": {
+    "maintenance refused and asked for more evidence": true,
+    "diagnosis ran again with extra evidence": true,
+    "still too uncertain, so it went to the operator": true,
+    "no ticket was drafted": true
+  },
+  "trace_sha256": "0e2b82f0e9b9486e",
+  "trace": [
+    {
+      "ts": "2026-10-06T17:00:34.330Z",
+      "incident_id": "cap_evidence_refused_real",
+      "from": "anomaly_detection",
+      "to": "tool:signal_deviations",
+      "type": "tool_call",
+      "content": {
+        "args": {},
+        "result": {
+          "signals": [
+            {
+              "key": "power_kw",
+              "value": 7.38,
+              "baseline": 5.52,
+              "z": 4.05
+            }
+          ],
+          "rule_hits": [],
+          "method": "zscore",
+          "score": 0.675,
+          "severity": "MEDIUM",
+          "note": "power 7.4 kW vs normal 5.5 kW (+4.0σ). No rule fired."
+        }
+      },
+      "llm_provider": "rules",
+      "duration_ms": 0
+    },
+    {
+      "ts": "2026-10-06T17:00:34.330Z",
+      "incident_id": "cap_evidence_refused_real",
+      "from": "anomaly_detection",
+      "to": "tool:sensor_health",
+      "type": "tool_call",
+      "content": {
+        "args": {},
+        "result": {
+          "frozen": [],
+          "out_of_range": [],
+          "missing": [],
+          "note": "All sensors are changing normally and within range."
+        }
+      },
+      "llm_provider": "rules",
+      "duration_ms": 0
+    },
+    {
+      "ts": "2026-10-06T17:00:34.330Z",
+      "incident_id": "cap_evidence_refused_real",
+      "from": "anomaly_detection",
+      "to": "tool:other_units",
+      "type": "tool_call",
+      "content": {
+        "args": {},
+        "result": {
+          "checked": 5,
+          "abnormal": [],
+          "building_wide_possible": false,
+          "max_abs_z_this_unit": 4.0,
+          "note": "All 5 other units look normal, so the problem is specific to AHU-5."
+        }
+      },
+      "llm_provider": "rules",
+      "duration_ms": 0
+    },
+    {
+      "ts": "2026-10-06T17:00:34.330Z",
+      "incident_id": "cap_evidence_refused_real",
+      "from": "anomaly_detection",
+      "to": "tool:schedule_context",
+      "type": "tool_call",
+      "content": {
+        "args": {},
+        "result": {
+          "time": "10:46",
+          "inside_schedule": true,
+          "status": "ON",
+          "occupancy": 19,
+          "fan_speed_pct": 75.0,
+          "note": "10:46, inside the 07:00–18:30 schedule; unit ON, 19 people in the zone."
+        }
+      },
+      "llm_provider": "rules",
+      "duration_ms": 0
+    },
+    {
+      "ts": "2026-10-06T17:00:34.330Z",
+      "incident_id": "cap_evidence_refused_real",
+      "from": "anomaly_detection",
+      "to": "tool:recent_trend",
+      "type": "tool_call",
+      "content": {
+        "args": {},
+        "result": {
+          "minutes": 30,
+          "signals": {
+            "zone_temp_c": {
+              "first": 23.18,
+              "last": 23.08,
+              "change": -0.1,
+              "min": 23.08,
+              "max": 23.36
+            },
+            "supply_temp_c": {
+              "first": 16.31,
+              "last": 16.07,
+              "change": -0.24,
+              "min": 15.99,
+              "max": 17.18
+            },
+            "airflow_cfm": {
+              "first": 2257.0,
+              "last": 2263.0,
+              "change": 6.0,
+              "min": 2210.0,
+              "max": 2286.0
+            },
+            "fan_speed_pct": {
+              "first": 75.0,
+              "last": 75.0,
+              "change": 0.0,
+              "min": 75.0,
+              "max": 75.0
+            },
+            "power_kw": {
+              "first": 6.65,
+              "last": 7.38,
+              "change": 0.73,
+              "min": 6.27,
+              "max": 7.38
+            },
+            "humidity_pct": {
+              "first": 54.6,
+              "last": 56.0,
+              "change": 1.4,
+              "min": 53.0,
+              "max": 56.9
+            },
+            "co2_ppm": {
+              "first": 1014.0,
+              "last": 1015.0,
+              "change": 1.0,
+              "min": 990.0,
+              "max": 1034.0
+            },
+            "occupancy": {
+              "first": 18,
+              "last": 19,
+              "change": 1,
+              "min": 17,
+              "max": 20
+            }
+          },
+          "airflow_per_fan_pct": {
+            "start": 30.1,
+            "end": 30.2
+          },
+          "note": "Over the last 30 min: power 6.7 kW → 7.4 kW; humidity 54.6 % → 56.0 %; supply air temperature 16.3 °C → 16.1 °C; airflow per % fan 30.1 → 30.2."
+        }
+      },
+      "llm_provider": "rules",
+      "duration_ms": 0
+    },
+    {
+      "ts": "2026-10-06T17:00:34.331Z",
+      "incident_id": "cap_evidence_refused_real",
+      "from": "anomaly_detection",
+      "to": "supervisor",
+      "type": "decision",
+      "content": {
+        "verdict": "equipment_fault",
+        "suspected_area": "cooling",
+        "severity": "MEDIUM",
+        "confidence": 0.6,
+        "summary": "AHU-5 shows a loss of cooling (power up 4σ).",
+        "key_evidence": [
+          "power 7.4 kW vs normal 5.5 kW (+4.0σ). No rule fired.",
+          "Over the last 30 min: power 6.7 kW → 7.4 kW; humidity 54.6 % → 56.0 %; supply air temperature 16.3 °C → 16.1 °C; airflow per % fan 30.1 → 30.2.",
+          "All 5 other units look normal, so the problem is specific to AHU-5."
+        ],
+        "recommend_next": "diagnosis"
+      },
+      "llm_provider": "rules",
+      "duration_ms": 0
+    },
+    {
+      "ts": "2026-10-06T17:00:34+00:00",
+      "incident_id": "cap_evidence_refused_real",
+      "from": "supervisor",
+      "to": "diagnosis",
+      "type": "route",
+      "content": {
+        "text": "No diagnosis yet"
+      },
+      "llm_provider": "rules",
+      "duration_ms": 0
+    },
+    {
+      "ts": "2026-10-06T17:00:34+00:00",
+      "incident_id": "cap_evidence_refused_real",
+      "from": "diagnosis",
+      "to": "supervisor",
+      "type": "result",
+      "content": {
+        "text": "cause=unknown confidence=0.3"
+      },
+      "llm_provider": "rules",
+      "duration_ms": 0
+    },
+    {
+      "ts": "2026-10-06T17:00:34+00:00",
+      "incident_id": "cap_evidence_refused_real",
+      "from": "supervisor",
+      "to": "energy",
+      "type": "route",
+      "content": {
+        "text": "Check energy impact and critique the diagnosis"
+      },
+      "llm_provider": "rules",
+      "duration_ms": 0
+    },
+    {
+      "ts": "2026-10-06T17:00:34+00:00",
+      "incident_id": "cap_evidence_refused_real",
+      "from": "energy",
+      "to": "supervisor",
+      "type": "result",
+      "content": {
+        "text": "44.64 kWh/day, cost 379.44"
+      },
+      "llm_provider": "rules",
+      "duration_ms": 0
+    },
+    {
+      "ts": "2026-10-06T17:00:34+00:00",
+      "incident_id": "cap_evidence_refused_real",
+      "from": "energy",
+      "to": "supervisor",
+      "type": "critique",
+      "content": {
+        "text": "agrees with the diagnosis"
+      },
+      "llm_provider": null,
+      "duration_ms": null
+    },
+    {
+      "ts": "2026-10-06T17:00:34+00:00",
+      "incident_id": "cap_evidence_refused_real",
+      "from": "supervisor",
+      "to": "maintenance",
+      "type": "route",
+      "content": {
+        "text": "Draft the ticket and priority"
+      },
+      "llm_provider": "rules",
+      "duration_ms": 0
+    },
+    {
+      "ts": "2026-10-06T17:00:34+00:00",
+      "incident_id": "cap_evidence_refused_real",
+      "from": "maintenance",
+      "to": "diagnosis",
+      "type": "request_more_evidence",
+      "content": {
+        "text": "Diagnosis confidence 0.3 is below 0.6; need a longer history window and peer-unit readings before drafting a ticket."
+      },
+      "llm_provider": "rules",
+      "duration_ms": 0
+    },
+    {
+      "ts": "2026-10-06T17:00:34+00:00",
+      "incident_id": "cap_evidence_refused_real",
+      "from": "supervisor",
+      "to": "diagnosis",
+      "type": "route",
+      "content": {
+        "text": "Maintenance needs more evidence"
+      },
+      "llm_provider": "rules",
+      "duration_ms": 0
+    },
+    {
+      "ts": "2026-10-06T17:00:34+00:00",
+      "incident_id": "cap_evidence_refused_real",
+      "from": "diagnosis",
+      "to": "supervisor",
+      "type": "result",
+      "content": {
+        "text": "cause=unknown confidence=0.3 (with extra evidence)"
+      },
+      "llm_provider": "rules",
+      "duration_ms": 0
+    },
+    {
+      "ts": "2026-10-06T17:00:34+00:00",
+      "incident_id": "cap_evidence_refused_real",
+      "from": "supervisor",
+      "to": "maintenance",
+      "type": "route",
+      "content": {
+        "text": "Draft the ticket and priority"
+      },
+      "llm_provider": "rules",
+      "duration_ms": 0
+    },
+    {
+      "ts": "2026-10-06T17:00:34+00:00",
+      "incident_id": "cap_evidence_refused_real",
+      "from": "maintenance",
+      "to": "supervisor",
+      "type": "refused",
+      "content": {
+        "text": "still not enough evidence: Diagnosis confidence 0.3 is below 0.6; need a longer history window and peer-unit readings before drafting a ticket."
+      },
+      "llm_provider": "rules",
+      "duration_ms": 0
+    },
+    {
+      "ts": "2026-10-06T17:00:34+00:00",
+      "incident_id": "cap_evidence_refused_real",
+      "from": "supervisor",
+      "to": "wait_approval",
+      "type": "route",
+      "content": {
+        "text": "Ready for the operator"
+      },
+      "llm_provider": "rules",
+      "duration_ms": 0
+    },
+    {
+      "ts": "2026-10-06T17:00:34+00:00",
+      "incident_id": "cap_evidence_refused_real",
+      "from": "supervisor",
+      "to": "operator",
+      "type": "escalate_to_human",
+      "content": {
+        "text": "Escalated to the operator: Diagnosis confidence 0.3 is below 0.6; need a longer history window and peer-unit readings before drafting a ticket."
+      },
+      "llm_provider": null,
+      "duration_ms": null
+    }
+  ],
+  "llm_calls": [
+    {
+      "ts": "2026-10-06T17:00:34+00:00",
+      "agent": "supervisor",
+      "provider": "rules",
+      "ok": true,
+      "ms": 0
+    },
+    {
+      "ts": "2026-10-06T17:00:34+00:00",
+      "agent": "diagnosis",
+      "provider": "rules",
+      "ok": true,
+      "ms": 0
+    },
+    {
+      "ts": "2026-10-06T17:00:34+00:00",
+      "agent": "supervisor",
+      "provider": "rules",
+      "ok": true,
+      "ms": 0
+    },
+    {
+      "ts": "2026-10-06T17:00:34+00:00",
+      "agent": "energy",
+      "provider": "rules",
+      "ok": true,
+      "ms": 0
+    },
+    {
+      "ts": "2026-10-06T17:00:34+00:00",
+      "agent": "supervisor",
+      "provider": "rules",
+      "ok": true,
+      "ms": 0
+    },
+    {
+      "ts": "2026-10-06T17:00:34+00:00",
+      "agent": "supervisor",
+      "provider": "rules",
+      "ok": true,
+      "ms": 0
+    },
+    {
+      "ts": "2026-10-06T17:00:34+00:00",
+      "agent": "diagnosis",
+      "provider": "rules",
+      "ok": true,
+      "ms": 0
+    },
+    {
+      "ts": "2026-10-06T17:00:34+00:00",
+      "agent": "supervisor",
+      "provider": "rules",
+      "ok": true,
+      "ms": 0
+    },
+    {
+      "ts": "2026-10-06T17:00:34+00:00",
+      "agent": "supervisor",
+      "provider": "rules",
+      "ok": true,
+      "ms": 0
+    }
+  ]
+}
