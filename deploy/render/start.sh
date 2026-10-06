@@ -4,6 +4,7 @@ set -e
 APP_DIR="${APP_DIR:-/app}"
 export MQTT_HOST=127.0.0.1 MQTT_PORT=1883
 export DATABASE_URL="${DATABASE_URL:-sqlite:////tmp/hvac.db}"
+export CHECKPOINT_DB="${CHECKPOINT_DB:-/tmp/checkpoints.sqlite}"
 
 mosquitto -c "$APP_DIR/mosquitto.conf" -d
 sleep 1

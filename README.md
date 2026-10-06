@@ -69,12 +69,12 @@ Four terminals, each with `venv\Scripts\activate`:
 | Terminal | Command | What you see |
 | --- | --- | --- |
 | 1 | `mosquitto -v` | broker log (skip if the Mosquitto service is already running) |
-| 2 | `cd backend` then `uvicorn app.dev_api:app --port 8000 --host 0.0.0.0` | ingestion log, anomaly events |
+| 2 | `cd backend` then `uvicorn app.api.main:app --port 8000 --host 0.0.0.0` | ingestion log, agents, incidents |
 | 3 | `cd simulator` then `python main.py --start 10:30` | type commands here, e.g. `inject AHU-4 filter_blockage` |
 | 4 | `cd dashboard`, create `.env.local` with `VITE_API_URL=http://localhost:8000`, then `npm run dev` | dashboard, top bar says **Live** |
 
 For AI triage, copy `.env.example` to `.env` in the repo root and set `OPENAI_API_KEY` (without a key it uses rules).
-Once Person 2's backend exists, terminal 2 runs their app instead of `dev_api`.
+`app.dev_api:app` is the older stand-in API (triage only), kept for debugging.
 
 ## Run it on a server (public HTTPS link)
 
