@@ -1,0 +1,22 @@
+# Render Blueprint: New + -> Blueprint -> pick this repo. One free web service.
+services:
+  - type: web
+    name: hvac-ahd
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./deploy/render/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: DEMO_TOKEN
+        generateValue: true
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: LLM_PROVIDER
+        value: openai
+      - key: OPENAI_MODEL
+        value: gpt-4o-mini
+      - key: SIM_START
+        value: "09:00"
