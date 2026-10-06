@@ -261,7 +261,7 @@ def build_graph(diagnose_fn=diagnose, energy_fn=analyse_energy,
                     "trace": _tr(s, operator, "supervisor", "rejected",
                                  f"Rejected again after {done} replans, closing the incident: {reason}")}
         return {"state": "investigating", "decision": d, "operator_feedback": reason, "replans": done + 1,
-                "diagnosis": None, "recommendation": None, "critique": None, "critique_open": False,
+                "diagnosis": None, "energy": None, "recommendation": None, "critique": None, "critique_open": False,
                 "critiqued_cause": None, "need_more_evidence": False, "evidence_rounds": 0,
                 "revisions": 0, "escalated": False, "steps": 0,
                 "trace": _tr(s, operator, "supervisor", "replan",
