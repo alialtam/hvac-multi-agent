@@ -13,4 +13,5 @@ openai>=1.40          # triage agent (OpenAI, or Ollama through its OpenAI-compa
 python-dotenv>=1.0    # reads .env
 rank-bm25>=0.2       # knowledge base search (Diagnosis agent)
 ollama>=0.3          # local LLM backup provider (app/llm)
+langgraph-checkpoint-sqlite
 langgraph>=0.2           # Supervisor graph (app/agents/supervisor.py)

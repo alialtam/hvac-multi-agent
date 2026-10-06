@@ -26,3 +26,4 @@ dashboard/dist/
 Thumbs.db
 .vscode/
 .idea/
+*.sqlite
