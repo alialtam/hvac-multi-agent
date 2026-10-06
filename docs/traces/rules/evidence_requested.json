@@ -1,0 +1,483 @@
+{
+  "scenario": "evidence_requested",
+  "behaviours": [
+    "Asking for more evidence"
+  ],
+  "setup": "Real compressor event. Diagnosis LLM answers are scripted: confidence 0.45, then 0.85 when it is called again with more evidence. Maintenance refusal is real.",
+  "provider": "rules",
+  "scripted_diagnosis_llm": true,
+  "sample_event_file": "evt_AHU-1_20260930T100300.json",
+  "event_id": "evt_AHU-1_20260930T100300",
+  "captured_at": "2026-10-06T17:00:34+00:00",
+  "code_commit": "add39d1",
+  "triage": {
+    "verdict": "equipment_fault",
+    "suspected_area": "cooling",
+    "severity": "HIGH",
+    "confidence": 0.75,
+    "summary": "AHU-1 shows a loss of cooling (supply air temperature up 14σ and coil temperature drop down 14σ).",
+    "key_evidence": [
+      "supply air temperature 24.7 °C vs normal 16.2 °C (+13.8σ); coil temperature drop -1.3 °C vs normal 7.0 °C (-13.6σ); power 0.8 kW vs normal 5.7 kW (-12.1σ). No rule fired.",
+      "Over the last 30 min: power 4.7 kW → 0.8 kW; supply air temperature 18.2 °C → 24.7 °C; airflow 2,230 CFM → 2,258 CFM; airflow per % fan 29.7 → 30.1.",
+      "All 5 other units look normal, so the problem is specific to AHU-1."
+    ],
+    "recommend_next": "diagnosis",
+    "provider": "rules",
+    "rules_verdict": "equipment_fault",
+    "agrees_with_rules": true,
+    "tools_used": [
+      "signal_deviations",
+      "sensor_health",
+      "other_units",
+      "schedule_context",
+      "recent_trend"
+    ],
+    "tokens": 0,
+    "duration_ms": 1
+  },
+  "result": {
+    "state": "awaiting_approval",
+    "diagnosis": "compressor_failure",
+    "confidence": 0.85,
+    "revisions": 0,
+    "replans": 0,
+    "escalated": false,
+    "has_recommendation": true
+  },
+  "checks": {
+    "maintenance refused and asked diagnosis for more evidence": true,
+    "diagnosis ran again with extra evidence": true,
+    "then a recommendation was produced": true
+  },
+  "trace_sha256": "1cc92c0fb87d4a55",
+  "trace": [
+    {
+      "ts": "2026-10-06T17:00:34.245Z",
+      "incident_id": "cap_evidence_requested",
+      "from": "anomaly_detection",
+      "to": "tool:signal_deviations",
+      "type": "tool_call",
+      "content": {
+        "args": {},
+        "result": {
+          "signals": [
+            {
+              "key": "supply_temp_c",
+              "value": 24.71,
+              "baseline": 16.18,
+              "z": 13.85
+            },
+            {
+              "key": "coil_dt_c",
+              "value": -1.28,
+              "baseline": 7.0,
+              "z": -13.56
+            },
+            {
+              "key": "power_kw",
+              "value": 0.83,
+              "baseline": 5.65,
+              "z": -12.07
+            }
+          ],
+          "rule_hits": [],
+          "method": "zscore",
+          "score": 1.0,
+          "severity": "HIGH",
+          "note": "supply air temperature 24.7 °C vs normal 16.2 °C (+13.8σ); coil temperature drop -1.3 °C vs normal 7.0 °C (-13.6σ); power 0.8 kW vs normal 5.7 kW (-12.1σ). No rule fired."
+        }
+      },
+      "llm_provider": "rules",
+      "duration_ms": 0
+    },
+    {
+      "ts": "2026-10-06T17:00:34.246Z",
+      "incident_id": "cap_evidence_requested",
+      "from": "anomaly_detection",
+      "to": "tool:sensor_health",
+      "type": "tool_call",
+      "content": {
+        "args": {},
+        "result": {
+          "frozen": [],
+          "out_of_range": [],
+          "missing": [],
+          "note": "All sensors are changing normally and within range."
+        }
+      },
+      "llm_provider": "rules",
+      "duration_ms": 0
+    },
+    {
+      "ts": "2026-10-06T17:00:34.246Z",
+      "incident_id": "cap_evidence_requested",
+      "from": "anomaly_detection",
+      "to": "tool:other_units",
+      "type": "tool_call",
+      "content": {
+        "args": {},
+        "result": {
+          "checked": 5,
+          "abnormal": [],
+          "building_wide_possible": false,
+          "max_abs_z_this_unit": 13.8,
+          "note": "All 5 other units look normal, so the problem is specific to AHU-1."
+        }
+      },
+      "llm_provider": "rules",
+      "duration_ms": 0
+    },
+    {
+      "ts": "2026-10-06T17:00:34.246Z",
+      "incident_id": "cap_evidence_requested",
+      "from": "anomaly_detection",
+      "to": "tool:schedule_context",
+      "type": "tool_call",
+      "content": {
+        "args": {},
+        "result": {
+          "time": "10:03",
+          "inside_schedule": true,
+          "status": "ON",
+          "occupancy": 21,
+          "fan_speed_pct": 75.0,
+          "note": "10:03, inside the 07:00–18:30 schedule; unit ON, 21 people in the zone."
+        }
+      },
+      "llm_provider": "rules",
+      "duration_ms": 0
+    },
+    {
+      "ts": "2026-10-06T17:00:34.246Z",
+      "incident_id": "cap_evidence_requested",
+      "from": "anomaly_detection",
+      "to": "tool:recent_trend",
+      "type": "tool_call",
+      "content": {
+        "args": {},
+        "result": {
+          "minutes": 30,
+          "signals": {
+            "zone_temp_c": {
+              "first": 23.34,
+              "last": 23.43,
+              "change": 0.09,
+              "min": 23.09,
+              "max": 23.45
+            },
+            "supply_temp_c": {
+              "first": 18.24,
+              "last": 24.71,
+              "change": 6.47,
+              "min": 16.24,
+              "max": 24.71
+            },
+            "airflow_cfm": {
+              "first": 2230.0,
+              "last": 2258.0,
+              "change": 28.0,
+              "min": 2201.0,
+              "max": 2308.0
+            },
+            "fan_speed_pct": {
+              "first": 75.0,
+              "last": 75.0,
+              "change": 0.0,
+              "min": 75.0,
+              "max": 75.0
+            },
+            "power_kw": {
+              "first": 4.73,
+              "last": 0.83,
+              "change": -3.9,
+              "min": 0.79,
+              "max": 5.49
+            },
+            "humidity_pct": {
+              "first": 58.7,
+              "last": 58.6,
+              "change": -0.1,
+              "min": 55.1,
+              "max": 59.1
+            },
+            "co2_ppm": {
+              "first": 1071.0,
+              "last": 1080.0,
+              "change": 9.0,
+              "min": 1055.0,
+              "max": 1087.0
+            },
+            "occupancy": {
+              "first": 19,
+              "last": 21,
+              "change": 2,
+              "min": 19,
+              "max": 22
+            }
+          },
+          "airflow_per_fan_pct": {
+            "start": 29.7,
+            "end": 30.1
+          },
+          "note": "Over the last 30 min: power 4.7 kW → 0.8 kW; supply air temperature 18.2 °C → 24.7 °C; airflow 2,230 CFM → 2,258 CFM; airflow per % fan 29.7 → 30.1."
+        }
+      },
+      "llm_provider": "rules",
+      "duration_ms": 0
+    },
+    {
+      "ts": "2026-10-06T17:00:34.246Z",
+      "incident_id": "cap_evidence_requested",
+      "from": "anomaly_detection",
+      "to": "supervisor",
+      "type": "decision",
+      "content": {
+        "verdict": "equipment_fault",
+        "suspected_area": "cooling",
+        "severity": "HIGH",
+        "confidence": 0.75,
+        "summary": "AHU-1 shows a loss of cooling (supply air temperature up 14σ and coil temperature drop down 14σ).",
+        "key_evidence": [
+          "supply air temperature 24.7 °C vs normal 16.2 °C (+13.8σ); coil temperature drop -1.3 °C vs normal 7.0 °C (-13.6σ); power 0.8 kW vs normal 5.7 kW (-12.1σ). No rule fired.",
+          "Over the last 30 min: power 4.7 kW → 0.8 kW; supply air temperature 18.2 °C → 24.7 °C; airflow 2,230 CFM → 2,258 CFM; airflow per % fan 29.7 → 30.1.",
+          "All 5 other units look normal, so the problem is specific to AHU-1."
+        ],
+        "recommend_next": "diagnosis"
+      },
+      "llm_provider": "rules",
+      "duration_ms": 0
+    },
+    {
+      "ts": "2026-10-06T17:00:34+00:00",
+      "incident_id": "cap_evidence_requested",
+      "from": "supervisor",
+      "to": "diagnosis",
+      "type": "route",
+      "content": {
+        "text": "No diagnosis yet"
+      },
+      "llm_provider": "rules",
+      "duration_ms": 0
+    },
+    {
+      "ts": "2026-10-06T17:00:34+00:00",
+      "incident_id": "cap_evidence_requested",
+      "from": "diagnosis",
+      "to": "supervisor",
+      "type": "result",
+      "content": {
+        "text": "cause=compressor_failure confidence=0.45"
+      },
+      "llm_provider": "fake",
+      "duration_ms": 0
+    },
+    {
+      "ts": "2026-10-06T17:00:34+00:00",
+      "incident_id": "cap_evidence_requested",
+      "from": "supervisor",
+      "to": "energy",
+      "type": "route",
+      "content": {
+        "text": "Check energy impact and critique the diagnosis"
+      },
+      "llm_provider": "rules",
+      "duration_ms": 0
+    },
+    {
+      "ts": "2026-10-06T17:00:34+00:00",
+      "incident_id": "cap_evidence_requested",
+      "from": "energy",
+      "to": "supervisor",
+      "type": "result",
+      "content": {
+        "text": "-115.68 kWh/day, cost -983.28"
+      },
+      "llm_provider": "rules",
+      "duration_ms": 0
+    },
+    {
+      "ts": "2026-10-06T17:00:34+00:00",
+      "incident_id": "cap_evidence_requested",
+      "from": "energy",
+      "to": "supervisor",
+      "type": "critique",
+      "content": {
+        "text": "agrees with the diagnosis"
+      },
+      "llm_provider": null,
+      "duration_ms": null
+    },
+    {
+      "ts": "2026-10-06T17:00:34+00:00",
+      "incident_id": "cap_evidence_requested",
+      "from": "supervisor",
+      "to": "maintenance",
+      "type": "route",
+      "content": {
+        "text": "Draft the ticket and priority"
+      },
+      "llm_provider": "rules",
+      "duration_ms": 0
+    },
+    {
+      "ts": "2026-10-06T17:00:34+00:00",
+      "incident_id": "cap_evidence_requested",
+      "from": "maintenance",
+      "to": "diagnosis",
+      "type": "request_more_evidence",
+      "content": {
+        "text": "Diagnosis confidence 0.45 is below 0.6; need a longer history window and peer-unit readings before drafting a ticket."
+      },
+      "llm_provider": "rules",
+      "duration_ms": 0
+    },
+    {
+      "ts": "2026-10-06T17:00:34+00:00",
+      "incident_id": "cap_evidence_requested",
+      "from": "supervisor",
+      "to": "diagnosis",
+      "type": "route",
+      "content": {
+        "text": "Maintenance needs more evidence"
+      },
+      "llm_provider": "rules",
+      "duration_ms": 0
+    },
+    {
+      "ts": "2026-10-06T17:00:34+00:00",
+      "incident_id": "cap_evidence_requested",
+      "from": "diagnosis",
+      "to": "supervisor",
+      "type": "result",
+      "content": {
+        "text": "cause=compressor_failure confidence=0.85 (with extra evidence)"
+      },
+      "llm_provider": "fake",
+      "duration_ms": 0
+    },
+    {
+      "ts": "2026-10-06T17:00:34+00:00",
+      "incident_id": "cap_evidence_requested",
+      "from": "supervisor",
+      "to": "maintenance",
+      "type": "route",
+      "content": {
+        "text": "Draft the ticket and priority"
+      },
+      "llm_provider": "rules",
+      "duration_ms": 0
+    },
+    {
+      "ts": "2026-10-06T17:00:34+00:00",
+      "incident_id": "cap_evidence_requested",
+      "from": "maintenance",
+      "to": "supervisor",
+      "type": "result",
+      "content": {
+        "text": "priority=HIGH, downtime=240 min"
+      },
+      "llm_provider": "rules",
+      "duration_ms": 0
+    },
+    {
+      "ts": "2026-10-06T17:00:34+00:00",
+      "incident_id": "cap_evidence_requested",
+      "from": "supervisor",
+      "to": "wait_approval",
+      "type": "route",
+      "content": {
+        "text": "Ready for the operator"
+      },
+      "llm_provider": "rules",
+      "duration_ms": 0
+    },
+    {
+      "ts": "2026-10-06T17:00:34+00:00",
+      "incident_id": "cap_evidence_requested",
+      "from": "supervisor",
+      "to": "operator",
+      "type": "escalate_to_human",
+      "content": {
+        "text": "Recommendation ready, waiting for operator approval"
+      },
+      "llm_provider": null,
+      "duration_ms": null
+    }
+  ],
+  "llm_calls": [
+    {
+      "ts": "2026-10-06T17:00:34+00:00",
+      "agent": "supervisor",
+      "provider": "rules",
+      "ok": true,
+      "ms": 0
+    },
+    {
+      "ts": "2026-10-06T17:00:34+00:00",
+      "agent": "diagnosis",
+      "provider": "fake",
+      "attempt": 1,
+      "ok": true,
+      "ms": 0,
+      "tokens": 0
+    },
+    {
+      "ts": "2026-10-06T17:00:34+00:00",
+      "agent": "supervisor",
+      "provider": "rules",
+      "ok": true,
+      "ms": 0
+    },
+    {
+      "ts": "2026-10-06T17:00:34+00:00",
+      "agent": "energy",
+      "provider": "rules",
+      "ok": true,
+      "ms": 0
+    },
+    {
+      "ts": "2026-10-06T17:00:34+00:00",
+      "agent": "supervisor",
+      "provider": "rules",
+      "ok": true,
+      "ms": 0
+    },
+    {
+      "ts": "2026-10-06T17:00:34+00:00",
+      "agent": "supervisor",
+      "provider": "rules",
+      "ok": true,
+      "ms": 0
+    },
+    {
+      "ts": "2026-10-06T17:00:34+00:00",
+      "agent": "diagnosis",
+      "provider": "fake",
+      "attempt": 1,
+      "ok": true,
+      "ms": 0,
+      "tokens": 0
+    },
+    {
+      "ts": "2026-10-06T17:00:34+00:00",
+      "agent": "supervisor",
+      "provider": "rules",
+      "ok": true,
+      "ms": 0
+    },
+    {
+      "ts": "2026-10-06T17:00:34+00:00",
+      "agent": "maintenance",
+      "provider": "rules",
+      "ok": true,
+      "ms": 0
+    },
+    {
+      "ts": "2026-10-06T17:00:34+00:00",
+      "agent": "supervisor",
+      "provider": "rules",
+      "ok": true,
+      "ms": 0
+    }
+  ]
+}

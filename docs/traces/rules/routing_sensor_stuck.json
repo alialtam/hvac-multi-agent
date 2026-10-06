@@ -1,0 +1,343 @@
+{
+  "scenario": "routing_sensor_stuck",
+  "behaviours": [
+    "Dynamic routing"
+  ],
+  "setup": "Real frozen-sensor sample event, nothing scripted. Energy is skipped because a frozen sensor has no energy cost.",
+  "provider": "rules",
+  "scripted_diagnosis_llm": false,
+  "sample_event_file": "evt_AHU-3_20260930T130800.json",
+  "event_id": "evt_AHU-3_20260930T130800",
+  "captured_at": "2026-10-06T17:00:34+00:00",
+  "code_commit": "add39d1",
+  "triage": {
+    "verdict": "sensor_fault",
+    "suspected_area": "sensor",
+    "severity": "MEDIUM",
+    "confidence": 0.8,
+    "summary": "AHU-3 shows a faulty sensor.",
+    "key_evidence": [
+      "room temperature has not changed for 10 readings while the unit runs: likely a frozen sensor.",
+      "No sensor is far from normal. Rules fired: sensor_flatline.",
+      "All 5 other units look normal, so the problem is specific to AHU-3."
+    ],
+    "recommend_next": "maintenance",
+    "provider": "rules",
+    "rules_verdict": "sensor_fault",
+    "agrees_with_rules": true,
+    "tools_used": [
+      "signal_deviations",
+      "sensor_health",
+      "other_units",
+      "schedule_context",
+      "recent_trend"
+    ],
+    "tokens": 0,
+    "duration_ms": 0
+  },
+  "result": {
+    "state": "awaiting_approval",
+    "diagnosis": "sensor_stuck",
+    "confidence": 0.85,
+    "revisions": 0,
+    "replans": 0,
+    "escalated": false,
+    "has_recommendation": true
+  },
+  "checks": {
+    "energy was skipped for a frozen sensor": true
+  },
+  "trace_sha256": "20176563b0589c5b",
+  "trace": [
+    {
+      "ts": "2026-10-06T17:00:34.137Z",
+      "incident_id": "cap_routing_sensor_stuck",
+      "from": "anomaly_detection",
+      "to": "tool:signal_deviations",
+      "type": "tool_call",
+      "content": {
+        "args": {},
+        "result": {
+          "signals": [],
+          "rule_hits": [
+            "sensor_flatline"
+          ],
+          "method": "rule",
+          "score": 0.6,
+          "severity": "MEDIUM",
+          "note": "No sensor is far from normal. Rules fired: sensor_flatline."
+        }
+      },
+      "llm_provider": "rules",
+      "duration_ms": 0
+    },
+    {
+      "ts": "2026-10-06T17:00:34.137Z",
+      "incident_id": "cap_routing_sensor_stuck",
+      "from": "anomaly_detection",
+      "to": "tool:sensor_health",
+      "type": "tool_call",
+      "content": {
+        "args": {},
+        "result": {
+          "frozen": [
+            "zone_temp_c"
+          ],
+          "out_of_range": [],
+          "missing": [],
+          "note": "room temperature has not changed for 10 readings while the unit runs: likely a frozen sensor."
+        }
+      },
+      "llm_provider": "rules",
+      "duration_ms": 0
+    },
+    {
+      "ts": "2026-10-06T17:00:34.137Z",
+      "incident_id": "cap_routing_sensor_stuck",
+      "from": "anomaly_detection",
+      "to": "tool:other_units",
+      "type": "tool_call",
+      "content": {
+        "args": {},
+        "result": {
+          "checked": 5,
+          "abnormal": [],
+          "building_wide_possible": false,
+          "max_abs_z_this_unit": 1.8,
+          "note": "All 5 other units look normal, so the problem is specific to AHU-3."
+        }
+      },
+      "llm_provider": "rules",
+      "duration_ms": 0
+    },
+    {
+      "ts": "2026-10-06T17:00:34.137Z",
+      "incident_id": "cap_routing_sensor_stuck",
+      "from": "anomaly_detection",
+      "to": "tool:schedule_context",
+      "type": "tool_call",
+      "content": {
+        "args": {},
+        "result": {
+          "time": "13:08",
+          "inside_schedule": true,
+          "status": "ON",
+          "occupancy": 11,
+          "fan_speed_pct": 75.0,
+          "note": "13:08, inside the 07:00–18:30 schedule; unit ON, 11 people in the zone."
+        }
+      },
+      "llm_provider": "rules",
+      "duration_ms": 0
+    },
+    {
+      "ts": "2026-10-06T17:00:34.137Z",
+      "incident_id": "cap_routing_sensor_stuck",
+      "from": "anomaly_detection",
+      "to": "tool:recent_trend",
+      "type": "tool_call",
+      "content": {
+        "args": {},
+        "result": {
+          "minutes": 30,
+          "signals": {
+            "zone_temp_c": {
+              "first": 23.46,
+              "last": 23.38,
+              "change": -0.08,
+              "min": 23.38,
+              "max": 23.64
+            },
+            "supply_temp_c": {
+              "first": 17.7,
+              "last": 17.82,
+              "change": 0.12,
+              "min": 16.33,
+              "max": 18.18
+            },
+            "airflow_cfm": {
+              "first": 2247.0,
+              "last": 2249.0,
+              "change": 2.0,
+              "min": 2191.0,
+              "max": 2311.0
+            },
+            "fan_speed_pct": {
+              "first": 75.0,
+              "last": 75.0,
+              "change": 0.0,
+              "min": 75.0,
+              "max": 75.0
+            },
+            "power_kw": {
+              "first": 5.3,
+              "last": 5.01,
+              "change": -0.29,
+              "min": 5.01,
+              "max": 5.91
+            },
+            "humidity_pct": {
+              "first": 52.5,
+              "last": 54.1,
+              "change": 1.6,
+              "min": 52.5,
+              "max": 55.4
+            },
+            "co2_ppm": {
+              "first": 971.0,
+              "last": 880.0,
+              "change": -91.0,
+              "min": 880.0,
+              "max": 976.0
+            },
+            "occupancy": {
+              "first": 17,
+              "last": 11,
+              "change": -6,
+              "min": 11,
+              "max": 18
+            }
+          },
+          "airflow_per_fan_pct": {
+            "start": 30.0,
+            "end": 30.0
+          },
+          "note": "Over the last 30 min: CO2 971 ppm → 880 ppm; power 5.3 kW → 5.0 kW; humidity 52.5 % → 54.1 %; airflow per % fan 30.0 → 30.0."
+        }
+      },
+      "llm_provider": "rules",
+      "duration_ms": 0
+    },
+    {
+      "ts": "2026-10-06T17:00:34.137Z",
+      "incident_id": "cap_routing_sensor_stuck",
+      "from": "anomaly_detection",
+      "to": "supervisor",
+      "type": "decision",
+      "content": {
+        "verdict": "sensor_fault",
+        "suspected_area": "sensor",
+        "severity": "MEDIUM",
+        "confidence": 0.8,
+        "summary": "AHU-3 shows a faulty sensor.",
+        "key_evidence": [
+          "room temperature has not changed for 10 readings while the unit runs: likely a frozen sensor.",
+          "No sensor is far from normal. Rules fired: sensor_flatline.",
+          "All 5 other units look normal, so the problem is specific to AHU-3."
+        ],
+        "recommend_next": "maintenance"
+      },
+      "llm_provider": "rules",
+      "duration_ms": 0
+    },
+    {
+      "ts": "2026-10-06T17:00:34+00:00",
+      "incident_id": "cap_routing_sensor_stuck",
+      "from": "supervisor",
+      "to": "diagnosis",
+      "type": "route",
+      "content": {
+        "text": "No diagnosis yet"
+      },
+      "llm_provider": "rules",
+      "duration_ms": 0
+    },
+    {
+      "ts": "2026-10-06T17:00:34+00:00",
+      "incident_id": "cap_routing_sensor_stuck",
+      "from": "diagnosis",
+      "to": "supervisor",
+      "type": "result",
+      "content": {
+        "text": "cause=sensor_stuck confidence=0.85"
+      },
+      "llm_provider": "rules",
+      "duration_ms": 0
+    },
+    {
+      "ts": "2026-10-06T17:00:34+00:00",
+      "incident_id": "cap_routing_sensor_stuck",
+      "from": "supervisor",
+      "to": "maintenance",
+      "type": "route",
+      "content": {
+        "text": "Draft the ticket and priority"
+      },
+      "llm_provider": "rules",
+      "duration_ms": 0
+    },
+    {
+      "ts": "2026-10-06T17:00:34+00:00",
+      "incident_id": "cap_routing_sensor_stuck",
+      "from": "maintenance",
+      "to": "supervisor",
+      "type": "result",
+      "content": {
+        "text": "priority=LOW, downtime=30 min"
+      },
+      "llm_provider": "rules",
+      "duration_ms": 0
+    },
+    {
+      "ts": "2026-10-06T17:00:34+00:00",
+      "incident_id": "cap_routing_sensor_stuck",
+      "from": "supervisor",
+      "to": "wait_approval",
+      "type": "route",
+      "content": {
+        "text": "Ready for the operator"
+      },
+      "llm_provider": "rules",
+      "duration_ms": 0
+    },
+    {
+      "ts": "2026-10-06T17:00:34+00:00",
+      "incident_id": "cap_routing_sensor_stuck",
+      "from": "supervisor",
+      "to": "operator",
+      "type": "escalate_to_human",
+      "content": {
+        "text": "Recommendation ready, waiting for operator approval"
+      },
+      "llm_provider": null,
+      "duration_ms": null
+    }
+  ],
+  "llm_calls": [
+    {
+      "ts": "2026-10-06T17:00:34+00:00",
+      "agent": "supervisor",
+      "provider": "rules",
+      "ok": true,
+      "ms": 0
+    },
+    {
+      "ts": "2026-10-06T17:00:34+00:00",
+      "agent": "diagnosis",
+      "provider": "rules",
+      "ok": true,
+      "ms": 0
+    },
+    {
+      "ts": "2026-10-06T17:00:34+00:00",
+      "agent": "supervisor",
+      "provider": "rules",
+      "ok": true,
+      "ms": 0
+    },
+    {
+      "ts": "2026-10-06T17:00:34+00:00",
+      "agent": "maintenance",
+      "provider": "rules",
+      "ok": true,
+      "ms": 0
+    },
+    {
+      "ts": "2026-10-06T17:00:34+00:00",
+      "agent": "supervisor",
+      "provider": "rules",
+      "ok": true,
+      "ms": 0
+    }
+  ]
+}

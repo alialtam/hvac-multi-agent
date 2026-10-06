@@ -127,3 +127,16 @@ def test_on_update_reports_each_step():
     seen = []
     run_incident(event(), Fakes().graph(), on_update=lambda s: seen.append(s.get("state")))
     assert len(seen) >= 4 and seen[-1] == "awaiting_approval"    
+
+def test_replan_clears_stale_energy():
+    f = Fakes()
+    causes = iter(["compressor_failure", "sensor_stuck"])
+
+    def diag(ev, more_evidence=False, critique=None):
+        c = next(causes)
+        return Diagnosis(cause=c, cause_text=c, confidence=0.9, evidence=["e"], sources=["s"]), META
+
+    g = build_graph(diag, f.energy, f.critique, f.maintenance)
+    run_incident(event(), g)
+    final = resume_incident(g, "evt1", "reject", "Ali", reason="it is the sensor")
+    assert final["diagnosis"]["cause"] == "sensor_stuck" and final["energy"] is None
