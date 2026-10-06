@@ -106,3 +106,16 @@ def test_peer_note_reaches_the_prompt(monkeypatch):
     monkeypatch.setattr(llm, "complete", fake)
     diagnose(ev({"airflow_cfm": -2.5}), peers=_peers)
     assert "AHU-2" in seen["prompt"]
+
+def test_prompt_contains_signature_table(monkeypatch):
+    seen = {}
+
+    def fake(prompt, schema, agent, context=None):
+        seen["prompt"] = prompt
+        return Diagnosis(cause="unknown", cause_text="x", confidence=0.3,
+                         evidence=["e"], sources=["s"]), {"provider": "fake"}
+
+    monkeypatch.setattr(llm, "complete", fake)
+    diagnose(ev({}))
+    p = seen["prompt"]
+    assert "COLLAPSES" in p and "RISES" in p and "occupancy is 0" in p
