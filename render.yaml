@@ -20,3 +20,5 @@ services:
         value: gpt-4o-mini
       - key: SIM_START
         value: "09:00"
+      - key: API_MODULE
+        value: app.api.main

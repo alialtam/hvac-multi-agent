@@ -7,8 +7,8 @@ paths the dashboard uses when it is built with VITE_API_URL=/api. The built
 dashboard (WEB_DIR) is served at / with a fallback to index.html, so links like
 /incidents/inc_0001 work after a reload.
 
-API_MODULE chooses which API to serve (default: the stand-in API with triage).
-When the full agent API exists, set API_MODULE to it; nothing else changes.
+API_MODULE chooses which API to serve: the full agent API (default) or the
+stand-in API app.dev_api (triage only, for debugging).
 """
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ from starlette.exceptions import HTTPException
 
 from .config import env
 
-api_module = importlib.import_module(env("API_MODULE", "app.dev_api"))
+api_module = importlib.import_module(env("API_MODULE", "app.api.main"))
 api: FastAPI = api_module.app
 WEB_DIR = Path(env("WEB_DIR", str(Path(__file__).resolve().parents[2] / "dashboard" / "dist")))
 

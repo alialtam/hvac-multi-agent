@@ -12,12 +12,13 @@ services:
   backend:
     build: { context: .., dockerfile: deploy/Dockerfile.app }
     image: hvac-app
-    command: uvicorn app.dev_api:app --host 0.0.0.0 --port 8000 --proxy-headers
+    command: uvicorn app.api.main:app --host 0.0.0.0 --port 8000 --proxy-headers
     working_dir: /app/backend
     env_file: .env
     environment:
       MQTT_HOST: mosquitto
       DATABASE_URL: sqlite:////app/state/hvac.db
+      CHECKPOINT_DB: /app/state/checkpoints.sqlite
     volumes:
       - state:/app/state
     depends_on: [mosquitto]
