@@ -70,3 +70,16 @@ def test_log_hook_called():
     s.log_hook = seen.append
     s.complete("p", Diagnosis, "diagnosis")
     assert seen and seen[0]["ok"] and seen[0]["agent"] == "diagnosis"
+
+def test_answer_wrapped_in_properties_is_unwrapped(monkeypatch):
+    from app.agents.schemas import Diagnosis
+    from app.llm import FakeProvider, llm
+    wrapped = {"properties": {"cause": "sensor_stuck", "cause_text": "x", "confidence": 0.8,
+                              "evidence": ["flat"], "sources": []}}
+    monkeypatch.setattr(llm, "providers", {"fake": FakeProvider([wrapped])})
+    llm.set_provider("fake")
+    try:
+        obj, meta = llm.complete("p", Diagnosis, "diagnosis", context={})
+        assert meta["provider"] == "fake" and obj.cause == "sensor_stuck" and meta["attempts"] == 1
+    finally:
+        llm.set_provider("ollama")
