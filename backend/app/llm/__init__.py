@@ -18,6 +18,21 @@ def _extract_json(raw: str) -> str:
     return raw[a:b + 1] if a != -1 and b > a else raw
 
 
+def _unwrap(js: str, schema) -> str:
+    """Small models often answer with the schema itself: {"properties": {"cause": ...}}.
+    If the answer has no schema field at the top level but they sit under "properties", use those."""
+    try:
+        d = json.loads(js)
+    except ValueError:
+        return js
+    names = set(schema.model_fields)
+    if isinstance(d, dict) and not (names & set(d)):
+        inner = d.get("properties")
+        if isinstance(inner, dict) and names & set(inner):
+            return json.dumps(inner)
+    return js
+
+
 class LLMService:
     def __init__(self, provider: Optional[str] = None):
         self.provider = provider or os.getenv("LLM_PROVIDER", "openai")
@@ -72,7 +87,7 @@ class LLMService:
                 t0 = time.perf_counter()
                 try:
                     raw, tokens = p.call(full)
-                    obj = schema.model_validate_json(_extract_json(raw))
+                    obj = schema.model_validate_json(_unwrap(_extract_json(raw), schema))
                 except Exception as e:
                     ms = int((time.perf_counter() - t0) * 1000)
                     self._log(agent=agent, provider=name, attempt=attempt, ok=False,
