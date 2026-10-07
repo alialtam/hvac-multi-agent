@@ -106,3 +106,52 @@ def test_peer_note_reaches_the_prompt(monkeypatch):
     monkeypatch.setattr(llm, "complete", fake)
     diagnose(ev({"airflow_cfm": -2.5}), peers=_peers)
     assert "AHU-2" in seen["prompt"]
+
+def test_prompt_contains_signature_table(monkeypatch):
+    seen = {}
+
+    def fake(prompt, schema, agent, context=None):
+        seen["prompt"] = prompt
+        return Diagnosis(cause="unknown", cause_text="x", confidence=0.3,
+                         evidence=["e"], sources=["s"]), {"provider": "fake"}
+
+    monkeypatch.setattr(llm, "complete", fake)
+    diagnose(ev({}))
+    p = seen["prompt"]
+    assert "COLLAPSES" in p and "RISES" in p and "occupancy is 0" in p
+
+
+from app.agents.diagnosis import schedule_note
+
+
+def _win(ts, status="ON", fan=100.0, occ=0):
+    return {"window": [{"ts": ts, "status": status, "fan_speed_pct": fan, "occupancy": occ}]}
+
+
+def test_schedule_note_outside_hours():
+    n = schedule_note(_win("2026-09-01T20:02:00Z"))
+    assert "20:02" in n and "OUTSIDE" in n and "occupancy 0" in n and "fan 100.0%" in n
+
+
+def test_schedule_note_inside_hours():
+    assert "INSIDE" in schedule_note(_win("2026-09-01T10:03:00Z", occ=21))
+
+
+def test_schedule_note_without_window():
+    assert "no recent readings" in schedule_note({"window": []})
+
+
+def test_time_check_is_first_and_after_hours_comes_first(monkeypatch):
+    seen = {}
+
+    def fake(prompt, schema, agent, context=None):
+        seen["prompt"] = prompt
+        return Diagnosis(cause="unknown", cause_text="x", confidence=0.3,
+                         evidence=["e"], sources=["s"]), {"provider": "fake"}
+
+    monkeypatch.setattr(llm, "complete", fake)
+    diagnose({**ev({}), **_win("2026-09-01T20:02:00Z")})
+    p = seen["prompt"]
+    assert p.index("Time check:") < p.index("Pick the most likely cause")
+    assert p.index("- after_hours_waste") < p.index("- filter_blockage:")
+    assert "never filter_blockage" in p
