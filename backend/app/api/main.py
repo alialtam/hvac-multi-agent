@@ -162,7 +162,8 @@ simulator = SimControl(on_status=lambda s: hub.publish("simulation", s))
 triage = TriageWorker(on_done=on_triage, store=ingestion.store, pipeline=ingestion.pipeline,
                       provider_fn=lambda: settings["provider"])
 runtime = AgentRuntime(incidents, traces, activity, ticket_store, publish=hub.publish,
-                       store=ingestion.store, pipeline=ingestion.pipeline)
+                       store=ingestion.store, pipeline=ingestion.pipeline,
+                       clock=lambda: ingestion.last_ts)    # timeline in building time, like detection
 
 
 @asynccontextmanager
