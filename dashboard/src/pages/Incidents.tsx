@@ -156,10 +156,26 @@ function IncidentView({ id }: { id: string }) {
         <Panel title="Cost of waiting">
           {inc.energy ? (
             <div className="px-4 py-4">
-              <p className="font-gauge text-[34px] font-semibold leading-none">
-                {money(inc.energy.cost_per_day, inc.energy.currency)}<span className="text-[16px] font-medium text-ink-2"> per day</span>
-              </p>
-              <p className="mt-1 text-[14px] text-ink-2">{num(inc.energy.extra_kwh_per_day)} kWh of extra electricity per day</p>
+              {inc.energy.extra_kwh_per_day > 0 ? (
+                <>
+                  <p className="font-gauge text-[34px] font-semibold leading-none">
+                    {money(inc.energy.cost_per_day, inc.energy.currency)}<span className="text-[16px] font-medium text-ink-2"> per day</span>
+                  </p>
+                  <p className="mt-1 text-[14px] text-ink-2">{num(inc.energy.extra_kwh_per_day)} kWh of extra electricity per day</p>
+                </>
+              ) : (
+                <>
+                  {/* less power than normal is not a saving: the unit is failing to do its job */}
+                  <p className="font-gauge text-[34px] font-semibold leading-none">
+                    {money(0, inc.energy.currency)}<span className="text-[16px] font-medium text-ink-2"> extra electricity</span>
+                  </p>
+                  <p className="mt-1 text-[14px] text-ink-2">
+                    {inc.energy.extra_kwh_per_day < 0
+                      ? `Uses ${num(-inc.energy.extra_kwh_per_day)} kWh less per day than normal, because it is not cooling properly. The cost is lost comfort and equipment wear.`
+                      : "No measurable change in electricity use."}
+                  </p>
+                </>
+              )}
               <p className="mt-3 text-[14.5px]">{inc.energy.explanation}</p>
             </div>
           ) : <p className="px-4 py-4 text-[14px] text-ink-2">No energy estimate for this incident.</p>}

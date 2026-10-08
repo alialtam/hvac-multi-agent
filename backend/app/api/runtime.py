@@ -24,9 +24,13 @@ def _now() -> str:
 
 class AgentRuntime:
     def __init__(self, incidents: dict, traces: dict, activity: list, tickets: list,
-                 publish: Callable[[str, dict], None], graph=None, store=None, pipeline=None):
+                 publish: Callable[[str, dict], None], graph=None, store=None, pipeline=None,
+                 clock: Optional[Callable[[], Optional[str]]] = None):
         self.incidents, self.traces, self.activity, self.tickets = incidents, traces, activity, tickets
         self.publish = publish
+        # building clock for what the dashboard shows (detection uses building time too);
+        # the execution trace keeps real UTC time
+        self.clock = clock
         self.graph = graph or build_graph(diagnose_fn=partial(diagnose, store=store, pipeline=pipeline),
                                           checkpointer=get_checkpointer())
         self.triage_steps: dict[str, list] = {}
@@ -115,6 +119,11 @@ class AgentRuntime:
         return inc
 
     # ---- internals ----
+    def _shown_time(self, fallback: Optional[str] = None) -> str:
+        """Building time if the clock has one, so the timeline matches the detection steps."""
+        t = self.clock() if self.clock else None
+        return t or fallback or _now()
+
     def _waiting(self, inc_id: str) -> bool:
         return "approval_wait" in (self.graph.get_state(_cfg(inc_id)).next or ())
 
@@ -135,7 +144,7 @@ class AgentRuntime:
 
     def _note(self, inc_id: str, agent: str, message: str):
         if inc_id in self.incidents:
-            self._step(inc_id, _now(), agent, message)
+            self._step(inc_id, self._shown_time(), agent, message)
 
     def _fields(self, s: dict) -> dict:
         """Graph state -> incident fields. Check the names against contracts/api_examples/incident_detail.json."""
@@ -161,10 +170,10 @@ class AgentRuntime:
         self._rebuild_trace(inc_id)
         for t in trace[self.seen[inc_id]:]:
             m = timeline_entry(t)
-            self._step(inc_id, t["ts"], m["agent"], m["message"])
+            self._step(inc_id, self._shown_time(t["ts"]), m["agent"], m["message"])
         self.seen[inc_id] = len(trace)
         inc.update(self._fields(s))
-        inc["updated_at"] = _now()
+        inc["updated_at"] = self._shown_time()
         self._publish_incident(inc)
 
     def _ticket(self, inc_id: str, s: dict):
@@ -172,7 +181,7 @@ class AgentRuntime:
         diag = Diagnosis.model_validate(s["diagnosis"])
         rec = Recommendation.model_validate(s["recommendation"])
         t = {"id": f"TCK-{len(self.tickets) + 1:04d}", "incident_id": inc_id, "status": "open",
-             "created_at": _now(), **draft_ticket(s["event"], rec, diag)}
+             "created_at": self._shown_time(), **draft_ticket(s["event"], rec, diag)}
         self.tickets.append(t)
         inc = self.incidents[inc_id]
         inc["ticket_id"] = t["id"]

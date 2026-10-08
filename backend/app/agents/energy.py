@@ -115,6 +115,8 @@ Diagnosed cause: {diagnosis.cause_text}
 Power vs baseline: {calc['delta_kw']} kW, over {calc['hours']} h per day
 Extra energy per day: {calc['extra_kwh_per_day']} kWh (negative means the unit draws less than baseline)
 Cost per day: INR {calc['cost_per_day']} at INR {calc['tariff']} per kWh
+If the extra energy is negative, never call it a saving: the unit uses less power only because it
+is not doing its job, so the real cost is lost cooling and equipment risk, not the electricity bill.
 Put these same numbers in extra_kwh_per_day and cost_per_day, currency INR."""
     obj, meta = llm.complete(prompt, EnergyImpact, "energy", context=ctx)
     obj = obj.model_copy(update={"extra_kwh_per_day": calc["extra_kwh_per_day"],
